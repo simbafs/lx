@@ -681,28 +681,30 @@ function printDebug(elements) {
      */
     function printContainer(container) {
         const rows = [];
-        const header = isRootElement(container.el) ? '#body' : `#${container.id}`;
-        console.log(`%c┌─ ${header}`, 'color: #9b59b6; font-weight: bold;');
 
         for (const [, element] of elements) {
             if (element.el.parentElement === container.el && !printed.has(element.id)) {
                 printed.add(element.id);
 
-                const resolved = element.resolved;
                 const constraints = element.constraints;
+                const resolved = element.resolved;
 
-                rows.push({
+                const row = {
                     id: element.id,
-                    c: element.isContainer ? '✓' : '',
-                    left: constraints.left ? formatValue(constraints.left.value) : '-',
-                    top: constraints.top ? formatValue(constraints.top.value) : '-',
-                    w: formatSize(element.width) || '-',
-                    h: formatSize(element.height) || '-',
-                    out_l: resolved.left !== undefined ? resolved.left : '-',
-                    out_t: resolved.top !== undefined ? resolved.top : '-',
-                    out_w: resolved.width !== undefined ? resolved.width : '-',
-                    out_h: resolved.height !== undefined ? resolved.height : '-',
-                });
+                    isC: element.isContainer ? '✓' : '',
+                    'lx-left': constraints.left ? formatValue(constraints.left.value) : '',
+                    'lx-right': constraints.right ? formatValue(constraints.right.value) : '',
+                    'lx-top': constraints.top ? formatValue(constraints.top.value) : '',
+                    'lx-bottom': constraints.bottom ? formatValue(constraints.bottom.value) : '',
+                    'lx-width': formatSize(element.width) || '',
+                    'lx-height': formatSize(element.height) || '',
+                    '→ left': resolved.left !== undefined ? resolved.left : '',
+                    '→ top': resolved.top !== undefined ? resolved.top : '',
+                    '→ width': resolved.width !== undefined ? resolved.width : '',
+                    '→ height': resolved.height !== undefined ? resolved.height : '',
+                };
+
+                rows.push(row);
 
                 if (element.isContainer) {
                     printContainer(element);
@@ -711,6 +713,7 @@ function printDebug(elements) {
         }
 
         if (rows.length > 0) {
+            console.log(`%c#${container.id || 'body'}`, 'color: #9b59b6; font-weight: bold;');
             console.table(rows);
         }
     }
