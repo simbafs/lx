@@ -672,6 +672,30 @@ function init(root) {
     }
 
     for (const [, element] of elements) {
+        if (!element.reference || element.reference === 'body') continue;
+
+        const container = elements.get(element.reference);
+        if (!container) continue;
+
+        const applyRelativeToContainer = (edge) => {
+            const constraint = element.constraints[edge];
+            if (constraint && constraint.value.type === 'number' && constraint.value.value < 0) {
+                constraint.value = {
+                    type: 'ref',
+                    targetId: element.reference,
+                    edge,
+                    offset: constraint.value.value,
+                };
+            }
+        };
+
+        applyRelativeToContainer('left');
+        applyRelativeToContainer('right');
+        applyRelativeToContainer('top');
+        applyRelativeToContainer('bottom');
+    }
+
+    for (const [, element] of elements) {
         const error = validateConstraints(element, elements);
         if (error) {
             errors.push(error);
