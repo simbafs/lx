@@ -637,11 +637,69 @@ function findReference(element) {
 // ============================================================================
 
 /**
+ * @param {ElementData} element
+ * @param {Map<string, ElementData>} elements
+ * @param {number} depth
+ * @returns {object}
+ */
+function debugElement(element, elements, depth = 0) {
+    const indent = '  '.repeat(depth);
+    const info = {
+        id: element.id,
+        isContainer: element.isContainer,
+        reference: element.reference,
+        constraints: element.constraints,
+        width: element.width,
+        height: element.height,
+        resolved: element.resolved,
+    };
+
+    if (depth === 0) {
+        return info;
+    }
+
+    const children = [];
+    for (const [, el] of elements) {
+        if (el.el.parentElement === element.el) {
+            children.push(debugElement(el, elements, depth + 1));
+        }
+    }
+
+    if (children.length > 0) {
+        info.children = children;
+    }
+
+    return info;
+}
+
+/**
+ * Print debug info for all elements
+ * @param {Map<string, ElementData>} elements
+ */
+function printDebug(elements) {
+    const rootElements = [];
+
+    for (const [, element] of elements) {
+        if (!element.el.parentElement || element.el.parentElement === document.body || element.el.parentElement === document.documentElement) {
+            rootElements.push(debugElement(element, elements, 0));
+        }
+    }
+
+    console.log('%c[lx] Debug', 'color: #3498db; font-weight: bold; font-size: 14px;');
+    console.log('%c┌─ Elements', 'color: #3498db; font-weight: bold;');
+    for (const el of rootElements) {
+        console.log('%c│', 'color: #3498db;', el);
+    }
+    console.log('%c└─', 'color: #3498db;');
+}
+
+/**
  * Initialize the lx layout engine
  * @param {HTMLElement} [root] - Root element to scan (defaults to document.body)
+ * @param {{debug?: boolean}} [options]
  * @returns {LxResult}
  */
-function init(root) {
+function init(root, options = {}) {
     root = root || document.body;
 
     /** @type {LxError[]} */
@@ -673,7 +731,9 @@ function init(root) {
 
     walk(root);
 
-    console.log(Object.fromEntries(elements));
+    if (options.debug) {
+        printDebug(elements);
+    }
 
     for (const [, element] of elements) {
         if (!element.reference) {
@@ -740,16 +800,19 @@ function init(root) {
 // ============================================================================
 
 if (typeof window !== 'undefined' && window.document) {
+    const isDebug = new URLSearchParams(window.location.search).has('lx-debug');
+    const debugOptions = { debug: isDebug };
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
-            const result = init();
+            const result = init(undefined, debugOptions);
             if (result.errors.length > 0) {
                 console.error('%c[lx]', 'color: #e74c3c; font-weight: bold;', 'Error');
                 console.table(result.errors);
             }
         });
     } else {
-        const result = init();
+        const result = init(undefined, debugOptions);
         if (result.errors.length > 0) {
             console.error('%c[lx]', 'color: #e74c3c; font-weight: bold;', 'Error');
             console.table(result.errors);
