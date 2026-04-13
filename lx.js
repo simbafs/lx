@@ -453,7 +453,8 @@ function applyContentSize(element, el) {
  */
 function generateCSS(element, elements) {
     const { resolved } = element;
-    let { left, top, right, bottom, width, height } = resolved;
+    const { width, height } = resolved;
+    let { left, top } = resolved;
 
     if (element.reference) {
         const container = elements.get(element.reference);
@@ -464,20 +465,7 @@ function generateCSS(element, elements) {
             if (top !== undefined && container.resolved.top !== undefined) {
                 top = top - container.resolved.top;
             }
-            if (right !== undefined && container.resolved.right !== undefined) {
-                right = right - container.resolved.right;
-            }
-            if (bottom !== undefined && container.resolved.bottom !== undefined) {
-                bottom = bottom - container.resolved.bottom;
-            }
         }
-    }
-
-    if (left !== undefined && right !== undefined) {
-        width = right - left;
-    }
-    if (top !== undefined && bottom !== undefined) {
-        height = bottom - top;
     }
 
     return { left, top, width, height };
@@ -716,10 +704,6 @@ function printDebug(elements, showResolved) {
                 if (showResolved) {
                     let cssLeft = resolved.left;
                     let cssTop = resolved.top;
-                    let cssRight = resolved.right;
-                    let cssBottom = resolved.bottom;
-                    let cssWidth = resolved.width;
-                    let cssHeight = resolved.height;
 
                     if (element.reference) {
                         const refElement = elements.get(element.reference);
@@ -730,28 +714,13 @@ function printDebug(elements, showResolved) {
                             if (cssTop !== undefined && refElement.resolved.top !== undefined) {
                                 cssTop = cssTop - refElement.resolved.top;
                             }
-                            if (cssRight !== undefined && refElement.resolved.right !== undefined) {
-                                cssRight = cssRight - refElement.resolved.right;
-                            }
-                            if (cssBottom !== undefined && refElement.resolved.bottom !== undefined) {
-                                cssBottom = cssBottom - refElement.resolved.bottom;
-                            }
                         }
-                    }
-
-                    if (cssLeft !== undefined && cssRight !== undefined) {
-                        cssWidth = cssRight - cssLeft;
-                    }
-                    if (cssTop !== undefined && cssBottom !== undefined) {
-                        cssHeight = cssBottom - cssTop;
                     }
 
                     row['→ left'] = cssLeft !== undefined ? cssLeft : ' ';
                     row['→ top'] = cssTop !== undefined ? cssTop : ' ';
-                    row['→ right'] = cssRight !== undefined ? cssRight : ' ';
-                    row['→ bottom'] = cssBottom !== undefined ? cssBottom : ' ';
-                    row['→ width'] = cssWidth !== undefined ? cssWidth : ' ';
-                    row['→ height'] = cssHeight !== undefined ? cssHeight : ' ';
+                    row['→ width'] = resolved.width !== undefined ? resolved.width : ' ';
+                    row['→ height'] = resolved.height !== undefined ? resolved.height : ' ';
                 }
 
                 rows.push(row);
@@ -765,7 +734,7 @@ function printDebug(elements, showResolved) {
         if (rows.length > 0) {
             console.log(`%c#${container.id || 'body'}`, 'color: #9b59b6; font-weight: bold;');
             if (showResolved) {
-                console.table(rows, ['id', 'c', '→ left', '→ top', '→ right', '→ bottom', '→ width', '→ height']);
+                console.table(rows, ['id', 'c', '→ left', '→ top', '→ width', '→ height']);
             } else {
                 console.table(rows, ['id', 'c', 'left', 'right', 'top', 'bottom', 'width', 'height']);
             }
