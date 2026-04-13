@@ -448,24 +448,40 @@ function applyContentSize(element, el) {
 
 /**
  * @param {ElementData} element
+ * @param {Map<string, ElementData>} elements
  * @returns {{left?:number,top?:number,width?:number,height?:number}}
  */
-function generateCSS(element) {
+function generateCSS(element, elements) {
     const { resolved } = element;
-    return {
+    const result = {
         left: resolved.left,
         top: resolved.top,
         width: resolved.width,
         height: resolved.height,
     };
+
+    if (element.reference) {
+        const container = elements.get(element.reference);
+        if (container && container.resolved) {
+            if (result.left !== undefined && container.resolved.left !== undefined) {
+                result.left = result.left - container.resolved.left;
+            }
+            if (result.top !== undefined && container.resolved.top !== undefined) {
+                result.top = result.top - container.resolved.top;
+            }
+        }
+    }
+
+    return result;
 }
 
 /**
  * @param {HTMLElement} el
  * @param {{left?:number,top?:number,width?:number,height?:number}} css
+ * @param {boolean} [isContainer]
  */
-function applyCSS(el, css) {
-    el.style.position = 'absolute';
+function applyCSS(el, css, isContainer) {
+    el.style.position = isContainer ? 'relative' : 'absolute';
 
     if (css.left !== undefined) {
         el.style.left = `${css.left}px`;
@@ -481,12 +497,6 @@ function applyCSS(el, css) {
     }
 }
 
-/**
- * @param {HTMLElement} el
- */
-function applyContainerCSS(el) {
-    el.style.position = 'relative';
-}
 
 // ============================================================================
 // Element Parser
@@ -709,12 +719,6 @@ function init(root) {
         return { errors };
     }
 
-    for (const [, element] of elements) {
-        if (element.isContainer) {
-            applyContainerCSS(element.el);
-        }
-    }
-
     solveConstraints(elements, graph);
 
     for (const [, element] of elements) {
@@ -724,8 +728,8 @@ function init(root) {
     }
 
     for (const [, element] of elements) {
-        const css = generateCSS(element);
-        applyCSS(element.el, css);
+        const css = generateCSS(element, elements);
+        applyCSS(element.el, css, element.isContainer);
     }
 
     return { errors };
