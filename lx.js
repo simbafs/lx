@@ -677,9 +677,9 @@ function init(root) {
         const container = elements.get(element.reference);
         if (!container) continue;
 
-        const applyRelativeToContainer = (edge) => {
+        const makeRelative = (edge) => {
             const constraint = element.constraints[edge];
-            if (constraint && constraint.value.type === 'number' && constraint.value.value < 0) {
+            if (constraint && constraint.value.type === 'number') {
                 constraint.value = {
                     type: 'ref',
                     targetId: element.reference,
@@ -689,10 +689,10 @@ function init(root) {
             }
         };
 
-        applyRelativeToContainer('left');
-        applyRelativeToContainer('right');
-        applyRelativeToContainer('top');
-        applyRelativeToContainer('bottom');
+        makeRelative('left');
+        makeRelative('right');
+        makeRelative('top');
+        makeRelative('bottom');
     }
 
     for (const [, element] of elements) {

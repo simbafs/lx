@@ -164,19 +164,37 @@ target 可為：
 
 ---
 
-## 6.1 數值
+## 6.1 數值（相對於 container）
+
+所有位置約束的數值預設相對於 container 的同邊邊界。
 
 ```html
 lx-left="10"
+lx-right="10"
+lx-top="10"
+lx-bottom="10"
 ```
 
 表示：
 
 ```txt
-self.left = 10
+self.left    = container.left + 10
+self.right   = container.right + 10
+self.top     = container.top + 10
+self.bottom  = container.bottom + 10
 ```
 
-（相對於參考座標系）
+負數亦同：
+
+```html
+lx-right="-50"
+```
+
+表示：
+
+```txt
+self.right = container.right - 50
+```
 
 ---
 
@@ -208,10 +226,11 @@ edge      = left | right | top | bottom
 ## 6.4 範例
 
 ```html
-lx-left="#logo.right+10"
-lx-top="#title.bottom+20"
-lx-right="#panel.right"
-lx-bottom="#box.top-10"
+lx-left="50"              <!-- 相對於 container.left + 50 -->
+lx-right="-50"             <!-- 相對於 container.right - 50 -->
+lx-top="#logo.bottom+10"   <!-- logo.bottom + 10 -->
+lx-left="#panel.right"      <!-- panel.right -->
+lx-bottom="#box.top-10"     <!-- box.top - 10 -->
 ```
 
 ---
