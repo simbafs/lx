@@ -9,29 +9,18 @@
 			div {
 				background-color: rgba(255, 180, 0, 0.08);
 				border: 1px dashed rgba(0, 0, 0, 0.25);
+				display: grid;
+				place-items: center;
 			}
 		</style>
 	</head>
 	<body>
 		<div id="screen" lx lx-t="50" lx-l="50" lx-w="1920" lx-h="1080">
-			<div id="logo" lx-l="50" lx-t="50" lx-w="100" lx-h="100">logo</div>
-			<div id="info" lx-l="50" lx-t="#logo.bottom+10" lx-w="200" lx-h="100">info card</div>
-
-			<div id="nested" lx lx-l="50" lx-t="#info.bottom+10" lx-w="300" lx-h="300">
-				<div id="nested-logo" lx-l="50" lx-t="50" lx-w="100" lx-h="100">nested logo</div>
-				<div id="nested-info" lx-l="50" lx-t="#nested-logo.bottom+10" lx-w="200" lx-h="100">
-					nested info card
-				</div>
-
-				<div id="nested-nested" lx lx-l="50" lx-t="#nested-info.bottom+10" lx-w="300" lx-h="300">
-					<div id="nested-nested-logo" lx-l="50" lx-t="50" lx-w="100" lx-h="100">nested logo</div>
-					<div id="nested-nested-info" lx-l="50" lx-t="#nested-nested-logo.bottom+10" lx-w="200" lx-h="100">
-						nested info card
-					</div>
-				</div>
+			<div id="main" lx-t="50" lx-h="756" lx-l="50" lx-w="1344">main</div>
+			<div id="sidebar" lx lx-t="50" lx-h="756" lx-l="#main.right+20" lx-r="-50">
+				<div id="info" lx-t="0" lx-h="300" lx-r="0" lx-l="0">info</div>
+				<div id="logo" lx-t="#info.bottom+20" lx-b="0" lx-l="0" lx-r="0">logo</div>
 			</div>
-
-			<div id="ad" lx-b="-50" lx-l="50" lx-right="-50" lx-h="100">ad banner</div>
 		</div>
 	</body>
 </html>

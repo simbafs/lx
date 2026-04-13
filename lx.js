@@ -709,13 +709,13 @@ function printDebug(elements, showResolved) {
                     let cssLeft = resolved.left;
                     let cssTop = resolved.top;
 
-                    if (!element.isContainer && element.reference) {
-                        const container = elements.get(element.reference);
-                        if (container) {
-                            cssLeft = resolved.left !== undefined && container.resolved.left !== undefined
-                                ? resolved.left - container.resolved.left : cssLeft;
-                            cssTop = resolved.top !== undefined && container.resolved.top !== undefined
-                                ? resolved.top - container.resolved.top : cssTop;
+                    if (element.reference) {
+                        const refElement = elements.get(element.reference);
+                        if (refElement && refElement.resolved) {
+                            cssLeft = resolved.left !== undefined && refElement.resolved.left !== undefined
+                                ? resolved.left - refElement.resolved.left : cssLeft;
+                            cssTop = resolved.top !== undefined && refElement.resolved.top !== undefined
+                                ? resolved.top - refElement.resolved.top : cssTop;
                         }
                     }
 
