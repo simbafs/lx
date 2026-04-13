@@ -658,35 +658,78 @@ function formatSize(size) {
 }
 
 /**
- * Print debug info for all elements using console.table
+ * Print debug info - one table per container
  * @param {Map<string, ElementData>} elements
  */
 function printDebug(elements) {
-    const rows = [];
+    console.log('%c[lx] Debug Info', 'color: #3498db; font-weight: bold; font-size: 14px;');
+
+    const printed = new Set();
+    const containers = [];
 
     for (const [, element] of elements) {
-        const resolved = element.resolved;
-        const constraints = element.constraints;
-
-        rows.push({
-            id: element.id,
-            container: element.isContainer ? '✓' : '',
-            ref: element.reference || '',
-            left: constraints.left ? formatValue(constraints.left.value) : '',
-            right: constraints.right ? formatValue(constraints.right.value) : '',
-            top: constraints.top ? formatValue(constraints.top.value) : '',
-            bottom: constraints.bottom ? formatValue(constraints.bottom.value) : '',
-            width: formatSize(element.width),
-            height: formatSize(element.height),
-            out_left: resolved.left !== undefined ? resolved.left : '',
-            out_top: resolved.top !== undefined ? resolved.top : '',
-            out_width: resolved.width !== undefined ? resolved.width : '',
-            out_height: resolved.height !== undefined ? resolved.height : '',
-        });
+        if (element.isContainer) {
+            containers.push(element);
+        }
     }
 
-    console.log('%c[lx] Debug Info', 'color: #3498db; font-weight: bold; font-size: 14px;');
-    console.table(rows);
+    for (const container of containers) {
+        const rows = [];
+        const isRootContainer = !container.el.parentElement ||
+            container.el.parentElement === document.body ||
+            container.el.parentElement === document.documentElement;
+
+        const header = isRootContainer ? '#body' : `#${container.id}`;
+        console.log(`%c┌─ ${header}`, 'color: #9b59b6; font-weight: bold;');
+
+        for (const [, element] of elements) {
+            if (element.el.parentElement === container.el && !printed.has(element.id)) {
+                printed.add(element.id);
+
+                const resolved = element.resolved;
+                const constraints = element.constraints;
+
+                rows.push({
+                    id: element.id,
+                    c: element.isContainer ? '✓' : '',
+                    left: constraints.left ? formatValue(constraints.left.value) : '-',
+                    top: constraints.top ? formatValue(constraints.top.value) : '-',
+                    w: formatSize(element.width) || '-',
+                    h: formatSize(element.height) || '-',
+                    out_l: resolved.left !== undefined ? resolved.left : '-',
+                    out_t: resolved.top !== undefined ? resolved.top : '-',
+                    out_w: resolved.width !== undefined ? resolved.width : '-',
+                    out_h: resolved.height !== undefined ? resolved.height : '-',
+                });
+
+                if (element.isContainer) {
+                    for (const [, el] of elements) {
+                        if (el.el.parentElement === element.el && !printed.has(el.id)) {
+                            printed.add(el.id);
+                            const r = el.resolved;
+                            const c = el.constraints;
+                            rows.push({
+                                id: `  ${el.id}`,
+                                c: '✓',
+                                left: c.left ? formatValue(c.left.value) : '-',
+                                top: c.top ? formatValue(c.top.value) : '-',
+                                w: formatSize(el.width) || '-',
+                                h: formatSize(el.height) || '-',
+                                out_l: r.left !== undefined ? r.left : '-',
+                                out_t: r.top !== undefined ? r.top : '-',
+                                out_w: r.width !== undefined ? r.width : '-',
+                                out_h: r.height !== undefined ? r.height : '-',
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        if (rows.length > 0) {
+            console.table(rows);
+        }
+    }
 }
 
 /**
