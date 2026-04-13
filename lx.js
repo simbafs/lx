@@ -453,26 +453,34 @@ function applyContentSize(element, el) {
  */
 function generateCSS(element, elements) {
     const { resolved } = element;
-    const result = {
-        left: resolved.left,
-        top: resolved.top,
-        width: resolved.width,
-        height: resolved.height,
-    };
+    let { left, top, right, bottom, width, height } = resolved;
 
     if (element.reference) {
         const container = elements.get(element.reference);
         if (container && container.resolved) {
-            if (result.left !== undefined && container.resolved.left !== undefined) {
-                result.left = result.left - container.resolved.left;
+            if (left !== undefined && container.resolved.left !== undefined) {
+                left = left - container.resolved.left;
             }
-            if (result.top !== undefined && container.resolved.top !== undefined) {
-                result.top = result.top - container.resolved.top;
+            if (top !== undefined && container.resolved.top !== undefined) {
+                top = top - container.resolved.top;
+            }
+            if (right !== undefined && container.resolved.right !== undefined) {
+                right = right - container.resolved.right;
+            }
+            if (bottom !== undefined && container.resolved.bottom !== undefined) {
+                bottom = bottom - container.resolved.bottom;
             }
         }
     }
 
-    return result;
+    if (left !== undefined && right !== undefined) {
+        width = right - left;
+    }
+    if (top !== undefined && bottom !== undefined) {
+        height = bottom - top;
+    }
+
+    return { left, top, width, height };
 }
 
 /**
@@ -708,23 +716,42 @@ function printDebug(elements, showResolved) {
                 if (showResolved) {
                     let cssLeft = resolved.left;
                     let cssTop = resolved.top;
+                    let cssRight = resolved.right;
+                    let cssBottom = resolved.bottom;
+                    let cssWidth = resolved.width;
+                    let cssHeight = resolved.height;
 
                     if (element.reference) {
                         const refElement = elements.get(element.reference);
                         if (refElement && refElement.resolved) {
-                            cssLeft = resolved.left !== undefined && refElement.resolved.left !== undefined
-                                ? resolved.left - refElement.resolved.left : cssLeft;
-                            cssTop = resolved.top !== undefined && refElement.resolved.top !== undefined
-                                ? resolved.top - refElement.resolved.top : cssTop;
+                            if (cssLeft !== undefined && refElement.resolved.left !== undefined) {
+                                cssLeft = cssLeft - refElement.resolved.left;
+                            }
+                            if (cssTop !== undefined && refElement.resolved.top !== undefined) {
+                                cssTop = cssTop - refElement.resolved.top;
+                            }
+                            if (cssRight !== undefined && refElement.resolved.right !== undefined) {
+                                cssRight = cssRight - refElement.resolved.right;
+                            }
+                            if (cssBottom !== undefined && refElement.resolved.bottom !== undefined) {
+                                cssBottom = cssBottom - refElement.resolved.bottom;
+                            }
                         }
+                    }
+
+                    if (cssLeft !== undefined && cssRight !== undefined) {
+                        cssWidth = cssRight - cssLeft;
+                    }
+                    if (cssTop !== undefined && cssBottom !== undefined) {
+                        cssHeight = cssBottom - cssTop;
                     }
 
                     row['→ left'] = cssLeft !== undefined ? cssLeft : ' ';
                     row['→ top'] = cssTop !== undefined ? cssTop : ' ';
-                    row['→ right'] = resolved.right !== undefined ? resolved.right : ' ';
-                    row['→ bottom'] = resolved.bottom !== undefined ? resolved.bottom : ' ';
-                    row['→ width'] = resolved.width !== undefined ? resolved.width : ' ';
-                    row['→ height'] = resolved.height !== undefined ? resolved.height : ' ';
+                    row['→ right'] = cssRight !== undefined ? cssRight : ' ';
+                    row['→ bottom'] = cssBottom !== undefined ? cssBottom : ' ';
+                    row['→ width'] = cssWidth !== undefined ? cssWidth : ' ';
+                    row['→ height'] = cssHeight !== undefined ? cssHeight : ' ';
                 }
 
                 rows.push(row);
