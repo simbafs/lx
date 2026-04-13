@@ -492,8 +492,13 @@ function applyContainerCSS(el) {
 // Element Parser
 // ============================================================================
 
-const EDGE_PATTERN = /^lx-(left|right|top|bottom)$/;
-const SIZE_PATTERN = /^lx-(width|height)$/;
+const EDGE_PATTERN = /^lx-(left|right|top|bottom|l|r|t|b)$/;
+const SIZE_PATTERN = /^lx-(width|height|w|h)$/;
+
+const ALIAS_MAP = {
+    l: 'left', r: 'right', t: 'top', b: 'bottom',
+    w: 'width', h: 'height',
+};
 
 /**
  * @param {HTMLElement} el
@@ -516,7 +521,7 @@ function parseElement(el) {
 
         const edgeMatch = name.match(EDGE_PATTERN);
         if (edgeMatch) {
-            const edge = edgeMatch[1];
+            const edge = ALIAS_MAP[edgeMatch[1]] || edgeMatch[1];
             constraints[edge] = {
                 edge,
                 value: parseValue(attr.value),
@@ -526,7 +531,7 @@ function parseElement(el) {
 
         const sizeMatch = name.match(SIZE_PATTERN);
         if (sizeMatch) {
-            const sizeName = sizeMatch[1];
+            const sizeName = ALIAS_MAP[sizeMatch[1]] || sizeMatch[1];
             const val = attr.value;
 
             if (val.includes('/')) {
