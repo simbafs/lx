@@ -687,21 +687,16 @@ function printDebug(elements) {
                 printed.add(element.id);
 
                 const constraints = element.constraints;
-                const resolved = element.resolved;
 
                 const row = {
-                    id: element.id,
-                    c: element.isContainer ? '✓' : '',
-                    left: constraints.left ? formatValue(constraints.left.value) : '',
-                    right: constraints.right ? formatValue(constraints.right.value) : '',
-                    top: constraints.top ? formatValue(constraints.top.value) : '',
-                    bottom: constraints.bottom ? formatValue(constraints.bottom.value) : '',
-                    width: formatSize(element.width) || '',
-                    height: formatSize(element.height) || '',
-                    '→ left': resolved.left !== undefined ? resolved.left : '',
-                    '→ top': resolved.top !== undefined ? resolved.top : '',
-                    '→ width': resolved.width !== undefined ? resolved.width : '',
-                    '→ height': resolved.height !== undefined ? resolved.height : '',
+                    id: '#' + element.id,
+                    'is container': element.isContainer ? '✓' : ' ',
+                    left: constraints.left ? formatValue(constraints.left.value) : ' ',
+                    right: constraints.right ? formatValue(constraints.right.value) : ' ',
+                    width: formatSize(element.width) || ' ',
+                    top: constraints.top ? formatValue(constraints.top.value) : ' ',
+                    bottom: constraints.bottom ? formatValue(constraints.bottom.value) : ' ',
+                    height: formatSize(element.height) || ' ',
                 };
 
                 rows.push(row);
