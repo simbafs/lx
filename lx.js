@@ -475,9 +475,15 @@ function generateCSS(element, elements) {
  * @param {HTMLElement} el
  * @param {{left?:number,top?:number,width?:number,height?:number}} css
  * @param {boolean} [isContainer]
+ * @param {boolean} [hasPositioning]
  */
-function applyCSS(el, css, isContainer) {
-    el.style.position = isContainer ? 'relative' : 'absolute';
+function applyCSS(el, css, isContainer, hasPositioning) {
+    // If container has explicit positioning (lx-left/top/right/bottom),
+    // use absolute so the left/top values are respected.
+    // Otherwise use relative for normal flow positioning.
+    // This solves the problem where container's calculated left/top
+    // were correct but ignored because relative doesn't use them.
+    el.style.position = (isContainer && !hasPositioning) ? 'relative' : 'absolute';
 
     if (css.left !== undefined) {
         el.style.left = `${css.left}px`;
@@ -851,7 +857,9 @@ function init(root, options = {}) {
 
     for (const [, element] of elements) {
         const css = generateCSS(element, elements);
-        applyCSS(element.el, css, element.isContainer);
+        const hasPositioning = element.constraints.left || element.constraints.top ||
+                              element.constraints.right || element.constraints.bottom;
+        applyCSS(element.el, css, element.isContainer, hasPositioning);
     }
 
     return { errors };
