@@ -11,6 +11,8 @@
 				border: 1px dashed rgba(0, 0, 0, 0.25);
 				display: grid;
 				place-items: center;
+				font-size: 4rem;
+				font-family: sans-serif;
 			}
 		</style>
 	</head>
@@ -19,8 +21,10 @@
 			<div id="main" lx-t="50" lx-h="756" lx-l="50" lx-w="1344">main</div>
 			<div id="sidebar" lx lx-t="50" lx-h="756" lx-l="#main.right+20" lx-r="-50">
 				<div id="info" lx-t="0" lx-h="300" lx-r="0" lx-l="0">info</div>
-				<div id="logo" lx-t="#info.bottom+20" lx-b="0" lx-l="0" lx-r="0">logo</div>
+				<div id="qa" lx-t="#info.bottom+20" lx-h="100" lx-r="0" lx-l="0">qa</div>
+				<div id="logo" lx-t="#qa.bottom+20" lx-b="0" lx-l="0" lx-r="0">logo</div>
 			</div>
+			<div id="ad" lx-t="#main.bottom+20" lx-b="-50" lx-l="50" lx-r="-50">AD</div>
 		</div>
 	</body>
 </html>
