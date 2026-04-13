@@ -640,36 +640,83 @@ function findReference(element) {
  * @param {ElementData} element
  * @param {Map<string, ElementData>} elements
  * @param {number} depth
- * @returns {object}
  */
-function debugElement(element, elements, depth = 0) {
+function printDebugElement(element, elements, depth = 0) {
     const indent = '  '.repeat(depth);
-    const info = {
-        id: element.id,
-        isContainer: element.isContainer,
-        reference: element.reference,
-        constraints: element.constraints,
-        width: element.width,
-        height: element.height,
-        resolved: element.resolved,
-    };
+    const prefix = depth === 0 ? '├─' : '└─';
+    const isContainer = element.isContainer;
 
-    if (depth === 0) {
-        return info;
+    console.log(
+        '%c%s %c#%s%c %s',
+        'color: #888;', prefix,
+        isContainer ? 'color: #9b59b6; font-weight: bold;' : 'color: #3498db; font-weight: bold;', element.id,
+        'color: inherit;',
+        isContainer ? '(container)' : ''
+    );
+
+    if (element.reference) {
+        console.log('%s   %cref: %c#%s', ' '.repeat(depth * 2), 'color: #888;', 'color: #27ae60;', element.reference);
     }
 
-    const children = [];
+    const constraints = element.constraints;
+    const hasConstraints = constraints.left || constraints.right || constraints.top || constraints.bottom;
+
+    if (hasConstraints) {
+        const lines = [];
+        if (constraints.left) lines.push(`left=${formatValue(constraints.left.value)}`);
+        if (constraints.right) lines.push(`right=${formatValue(constraints.right.value)}`);
+        if (constraints.top) lines.push(`top=${formatValue(constraints.top.value)}`);
+        if (constraints.bottom) lines.push(`bottom=${formatValue(constraints.bottom.value)}`);
+        console.log('%s   %c%s%c %s', ' '.repeat(depth * 2), 'color: #888;', '├─', 'color: inherit;', lines.join(', '));
+    }
+
+    if (element.width !== undefined || element.height !== undefined) {
+        const sizeParts = [];
+        if (element.width !== undefined) {
+            sizeParts.push(`w=${formatSize(element.width)}`);
+        }
+        if (element.height !== undefined) {
+            sizeParts.push(`h=${formatSize(element.height)}`);
+        }
+        console.log('%s   %c├─ size%c %s', ' '.repeat(depth * 2), 'color: #888;', 'color: inherit;', sizeParts.join(', '));
+    }
+
+    if (Object.keys(element.resolved).length > 0) {
+        const resolved = element.resolved;
+        const parts = [];
+        if (resolved.left !== undefined) parts.push(`left:${resolved.left}`);
+        if (resolved.top !== undefined) parts.push(`top:${resolved.top}`);
+        if (resolved.width !== undefined) parts.push(`w:${resolved.width}`);
+        if (resolved.height !== undefined) parts.push(`h:${resolved.height}`);
+        console.log('%s   %c└─ resolved%c %s', ' '.repeat(depth * 2), 'color: #888;', 'color: #f39c12; font-weight: bold;', parts.join(', '));
+    }
+
     for (const [, el] of elements) {
         if (el.el.parentElement === element.el) {
-            children.push(debugElement(el, elements, depth + 1));
+            printDebugElement(el, elements, depth + 1);
         }
     }
+}
 
-    if (children.length > 0) {
-        info.children = children;
+/**
+ * @param {Value} value
+ * @returns {string}
+ */
+function formatValue(value) {
+    if (value.type === 'number') {
+        return String(value.value);
     }
+    return `#${value.targetId}.${value.edge}${value.offset >= 0 ? '+' : ''}${value.offset}`;
+}
 
-    return info;
+/**
+ * @param {{min:number,max:number}|number|undefined} size
+ * @returns {string}
+ */
+function formatSize(size) {
+    if (size === undefined) return '';
+    if (typeof size === 'number') return String(size);
+    return `${size.min}/${size.max}`;
 }
 
 /**
@@ -677,20 +724,49 @@ function debugElement(element, elements, depth = 0) {
  * @param {Map<string, ElementData>} elements
  */
 function printDebug(elements) {
-    const rootElements = [];
+    console.log('%c\n[lx] Debug Info', 'color: #3498db; font-weight: bold; font-size: 16px;');
+
+    const printed = new Set();
 
     for (const [, element] of elements) {
+        if (printed.has(element.id)) continue;
+
         if (!element.el.parentElement || element.el.parentElement === document.body || element.el.parentElement === document.documentElement) {
-            rootElements.push(debugElement(element, elements, 0));
+            printDebugElement(element, elements, 0);
+            printed.add(element.id);
+
+            const printChildrenRecursively = (parentEl) => {
+                for (const [, el] of elements) {
+                    if (el.el.parentElement === parentEl && !printed.has(el.id)) {
+                        const depth = getDepth(el, elements, 1);
+                        printDebugElement(el, elements, depth);
+                        printed.add(el.id);
+                        printChildrenRecursively(el.el);
+                    }
+                }
+            };
+            printChildrenRecursively(element.el);
         }
     }
+    console.log('');
+}
 
-    console.log('%c[lx] Debug', 'color: #3498db; font-weight: bold; font-size: 14px;');
-    console.log('%c┌─ Elements', 'color: #3498db; font-weight: bold;');
-    for (const el of rootElements) {
-        console.log('%c│', 'color: #3498db;', el);
+/**
+ * @param {ElementData} element
+ * @param {Map<string, ElementData>} elements
+ * @param {number} depth
+ * @returns {number}
+ */
+function getDepth(element, elements, depth) {
+    if (!element.el.parentElement || element.el.parentElement === document.body) {
+        return depth - 1;
     }
-    console.log('%c└─', 'color: #3498db;');
+    for (const [, el] of elements) {
+        if (el.el === element.el.parentElement) {
+            return getDepth(el, elements, depth + 1);
+        }
+    }
+    return depth - 1;
 }
 
 /**
