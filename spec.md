@@ -103,7 +103,8 @@ document.body
 則：
 
 * **該元素成為 container（提供給子元素用）**
-* **但不影響它自己的 reference**
+* **container 身份只影響子元素，不影響自己**
+* **自己的 positioning 行為與一般元素相同**
 
 ---
 
@@ -113,7 +114,7 @@ document.body
 <div lx lx-left="100">
 ```
 
-* `div.left` 仍然相對於 body
+* `div` 的 CSS 輸出為 `left: 100px`（offset 相對於 parent）
 * `div` 只是「提供 container 給子元素」
 
 ---
@@ -405,14 +406,19 @@ position: absolute;
 
 ## 11.3 輸出
 
-最終建議輸出：
+最終 CSS 輸出為**相對於 parent container 的 offset**：
 
 ```css
-left
-top
+position: absolute;  /* 或 relative（container 元素） */
+left: <offset from parent>;
+top: <offset from parent>;
 width
 height
 ```
+
+例如：
+- `lx-left="50"` → 輸出 `left: 50px`（在 parent 的 50px 處）
+- `lx-left="0"` → 輸出 `left: 0px`（對齊 parent 左邊緣）
 
 ---
 
