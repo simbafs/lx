@@ -670,10 +670,9 @@ function isRootElement(el) {
 /**
  * Print debug info - one table per container
  * @param {Map<string, ElementData>} elements
+ * @param {boolean} [showResolved]
  */
-function printDebug(elements) {
-    console.log('%c[lx] Debug Info', 'color: #3498db; font-weight: bold; font-size: 14px;');
-
+function printDebug(elements, showResolved) {
     const printed = new Set();
 
     /**
@@ -687,17 +686,27 @@ function printDebug(elements) {
                 printed.add(element.id);
 
                 const constraints = element.constraints;
+                const resolved = element.resolved;
 
                 const row = {
                     id: '#' + element.id,
-                    'is container': element.isContainer ? '✓' : ' ',
+                    c: element.isContainer ? '✓' : ' ',
                     left: constraints.left ? formatValue(constraints.left.value) : ' ',
                     right: constraints.right ? formatValue(constraints.right.value) : ' ',
-                    width: formatSize(element.width) || ' ',
                     top: constraints.top ? formatValue(constraints.top.value) : ' ',
                     bottom: constraints.bottom ? formatValue(constraints.bottom.value) : ' ',
+                    width: formatSize(element.width) || ' ',
                     height: formatSize(element.height) || ' ',
                 };
+
+                if (showResolved) {
+                    row['→ left'] = resolved.left !== undefined ? resolved.left : ' ';
+                    row['→ top'] = resolved.top !== undefined ? resolved.top : ' ';
+                    row['→ right'] = resolved.right !== undefined ? resolved.right : ' ';
+                    row['→ bottom'] = resolved.bottom !== undefined ? resolved.bottom : ' ';
+                    row['→ width'] = resolved.width !== undefined ? resolved.width : ' ';
+                    row['→ height'] = resolved.height !== undefined ? resolved.height : ' ';
+                }
 
                 rows.push(row);
 
@@ -759,6 +768,7 @@ function init(root, options = {}) {
     walk(root);
 
     if (options.debug) {
+        console.log('%c[lx] Parsed', 'color: #3498db; font-weight: bold; font-size: 14px;');
         printDebug(elements);
     }
 
@@ -812,6 +822,11 @@ function init(root, options = {}) {
         if (element.width || element.height) {
             applyContentSize(element, element.el);
         }
+    }
+
+    if (options.debug) {
+        console.log('%c[lx] Resolved', 'color: #27ae60; font-weight: bold; font-size: 14px;');
+        printDebug(elements, true);
     }
 
     for (const [, element] of elements) {
