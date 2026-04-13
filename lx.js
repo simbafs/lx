@@ -700,8 +700,21 @@ function printDebug(elements, showResolved) {
                 };
 
                 if (showResolved) {
-                    row['→ left'] = resolved.left !== undefined ? resolved.left : ' ';
-                    row['→ top'] = resolved.top !== undefined ? resolved.top : ' ';
+                    let cssLeft = resolved.left;
+                    let cssTop = resolved.top;
+
+                    if (!element.isContainer && element.reference) {
+                        const container = elements.get(element.reference);
+                        if (container) {
+                            cssLeft = resolved.left !== undefined && container.resolved.left !== undefined
+                                ? resolved.left - container.resolved.left : cssLeft;
+                            cssTop = resolved.top !== undefined && container.resolved.top !== undefined
+                                ? resolved.top - container.resolved.top : cssTop;
+                        }
+                    }
+
+                    row['→ left'] = cssLeft !== undefined ? cssLeft : ' ';
+                    row['→ top'] = cssTop !== undefined ? cssTop : ' ';
                     row['→ right'] = resolved.right !== undefined ? resolved.right : ' ';
                     row['→ bottom'] = resolved.bottom !== undefined ? resolved.bottom : ' ';
                     row['→ width'] = resolved.width !== undefined ? resolved.width : ' ';
