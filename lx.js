@@ -690,13 +690,19 @@ function printDebug(elements, showResolved) {
 
                 const row = {
                     id: '#' + element.id,
-                    c: element.isContainer ? '✓' : ' ',
+                    'c': element.isContainer ? '✓' : ' ',
                     left: constraints.left ? formatValue(constraints.left.value) : ' ',
                     right: constraints.right ? formatValue(constraints.right.value) : ' ',
+                    width: formatSize(element.width) || ' ',
                     top: constraints.top ? formatValue(constraints.top.value) : ' ',
                     bottom: constraints.bottom ? formatValue(constraints.bottom.value) : ' ',
-                    width: formatSize(element.width) || ' ',
                     height: formatSize(element.height) || ' ',
+                    '→ left': ' ',
+                    '→ top': ' ',
+                    '→ right': ' ',
+                    '→ bottom': ' ',
+                    '→ width': ' ',
+                    '→ height': ' ',
                 };
 
                 if (showResolved) {
@@ -731,7 +737,12 @@ function printDebug(elements, showResolved) {
 
         if (rows.length > 0) {
             console.log(`%c#${container.id || 'body'}`, 'color: #9b59b6; font-weight: bold;');
-            console.table(rows);
+            if (showResolved) {
+                console.table(rows, ['id', 'c', '→ left', '→ top', '→ right', '→ bottom', '→ width', '→ height']);
+            } else {
+                console.table(rows, ['id', 'c', 'left', 'right', 'top', 'bottom', 'width', 'height']);
+            }
+
         }
     }
 
