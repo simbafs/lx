@@ -162,6 +162,55 @@ const FIXED_SIZE_RE = /^-?\d+(?:\.\d+)?$/
 const RANGE_SIZE_RE = /^(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/
 
 /**
+ * Matches expressions wrapped in parentheses:
+ * - (100+50)
+ * - ({gap}*2)
+ * - (100-20)
+ *
+ * Groups:
+ * 1 => expression without parens
+ *
+ * @type {RegExp}
+ */
+const EXPRESSION_RE = /^\(([^()]+)\)$/
+
+/**
+ * Matches position with expression offset:
+ * - #id.edge+({gap}*2)
+ * - #id.edge-({offset}/2)
+ * - body.edge+({scale}*100)
+ *
+ * Groups:
+ * 1 => ref (body or #id)
+ * 2 => id without #
+ * 3 => edge
+ * 4 => sign (+/-)
+ * 5 => expression
+ *
+ * @type {RegExp}
+ */
+const POSITION_EXPR_RE = /^(body|#([A-Za-z_][\w\-:.]*))\.(left|right|top|bottom)([+-])(\(.+\))$/
+
+/**
+ * Matches variable references:
+ * - {gap}
+ * - {scale}
+ *
+ * @type {RegExp}
+ */
+const VARIABLE_RE = /^\{([A-Za-z_][\w]*)\}$/
+
+/**
+ * Matches a token in math expressions:
+ * - number: 100, -50, 3.14
+ * - variable: {name}
+ * - operator: +, -, *, /
+ *
+ * @type {RegExp}
+ */
+const MATH_TOKEN_RE = /(-?\d+(?:\.\d+)?|\{[^}]+\}|[+\-*/])/
+
+/**
  * --------------------------------------------------------------------------
  * Utility Functions
  * --------------------------------------------------------------------------
@@ -185,6 +234,202 @@ function hasLxAttrs(el) {
 	if (el.hasAttribute('lx')) return true
 	if (ALL_ATTRS.some(attr => el.hasAttribute(attr))) return true
 	return Object.keys(ATTR_ALIASES).some(alias => el.hasAttribute(alias))
+}
+
+/**
+ * Gets a variable value from the element or its ancestors via data-lx-* attributes.
+ * Performs bubbling lookup from current element up to body.
+ *
+ * @param {HTMLElement} el
+ * @param {string} name
+ * @returns {number}
+ */
+function getVariable(el, name) {
+	let current = /** @type {HTMLElement|null} */ (el)
+
+	while (current && current !== document.body) {
+		const attrName = `data-lx-${name}`
+		if (current.hasAttribute(attrName)) {
+			const rawValue = /** @type {string} */ (current.getAttribute(attrName))
+			const numValue = Number(rawValue)
+
+			if (!Number.isFinite(numValue)) {
+				throw new Error(
+					`[lx] Variable "${name}" on ${describeEl(current)} has non-numeric value "${rawValue}".`,
+				)
+			}
+
+			return numValue
+		}
+		current = /** @type {HTMLElement|null} */ (current.parentElement)
+	}
+
+	if (current === document.body && current.hasAttribute(`data-lx-${name}`)) {
+		const rawValue = /** @type {string} */ (current.getAttribute(`data-lx-${name}`))
+		const numValue = Number(rawValue)
+
+		if (!Number.isFinite(numValue)) {
+			throw new Error(
+				`[lx] Variable "${name}" on <body> has non-numeric value "${rawValue}".`,
+			)
+		}
+
+		return numValue
+	}
+
+	throw new Error(`[lx] Undefined variable: ${name}`)
+}
+
+/**
+ * Checks if a string contains nested parentheses.
+ * @param {string} expr
+ * @returns {boolean}
+ */
+function hasNestedParentheses(expr) {
+	let depth = 0
+	for (const char of expr) {
+		if (char === '(') {
+			depth++
+			if (depth > 1) return true
+		} else if (char === ')') {
+			depth--
+		}
+	}
+	return false
+}
+
+/**
+ * Tokenizes a math expression into numbers, variables, and operators.
+ * @param {string} expr
+ * @param {HTMLElement} el
+ * @returns {(number|string)[]}
+ */
+function tokenizeMathExpr(expr, el) {
+	const tokens = expr.split(MATH_TOKEN_RE).filter(t => t.trim() !== '')
+	return tokens.map(token => {
+		if (VARIABLE_RE.test(token)) {
+			const varName = token.slice(1, -1)
+			return getVariable(el, varName)
+		}
+
+		const num = Number(token)
+		if (Number.isFinite(num)) {
+			return num
+		}
+
+		if (['+', '-', '*', '/'].includes(token)) {
+			return token
+		}
+
+		throw new Error(`[lx] Invalid token "${token}" in expression "${expr}" on ${describeEl(el)}.`)
+	})
+}
+
+/**
+ * Evaluates a math expression without using eval().
+ * Supports +, -, *, / operators.
+ *
+ * @param {string} expr
+ * @param {HTMLElement} el
+ * @returns {number}
+ */
+function evaluateMath(expr, el) {
+	if (hasNestedParentheses(expr)) {
+		throw new Error(`[lx] Nested parentheses are not supported: (${expr})`)
+	}
+
+	const tokens = tokenizeMathExpr(expr, el)
+
+	if (tokens.length === 0) {
+		throw new Error(`[lx] Empty expression on ${describeEl(el)}.`)
+	}
+
+	const nums = /** @type {number[]} */ ([])
+	const ops = /** @type {string[]} */ ([])
+
+	let expectNumber = true
+
+	for (const token of tokens) {
+		if (expectNumber) {
+			if (typeof token !== 'number') {
+				throw new Error(`[lx] Unexpected operator "${token}" in expression "${expr}" on ${describeEl(el)}.`)
+			}
+			nums.push(token)
+			expectNumber = false
+		} else {
+			if (typeof token === 'number') {
+				throw new Error(`[lx] Unexpected number "${token}" in expression "${expr}" on ${describeEl(el)}.`)
+			}
+			if (!['+', '-', '*', '/'].includes(token)) {
+				throw new Error(`[lx] Invalid operator "${token}" in expression "${expr}" on ${describeEl(el)}.`)
+			}
+			ops.push(token)
+			expectNumber = true
+		}
+	}
+
+	if (expectNumber) {
+		throw new Error(`[lx] Expression ends with operator on ${describeEl(el)}.`)
+	}
+
+	let i = 0
+	while (i < ops.length) {
+		if (ops[i] === '*' || ops[i] === '/') {
+			const left = nums[i]
+			const right = nums[i + 1]
+			const op = ops[i]
+
+			if (op === '/' && right === 0) {
+				throw new Error(`[lx] Division by zero in expression "${expr}" on ${describeEl(el)}.`)
+			}
+
+			const result = op === '*' ? left * right : left / right
+			nums.splice(i, 2, result)
+			ops.splice(i, 1)
+		} else {
+			i++
+		}
+	}
+
+	i = 0
+	while (i < ops.length) {
+		const left = nums[i]
+		const right = nums[i + 1]
+		const op = ops[i]
+
+		const result = op === '+' ? left + right : left - right
+		nums.splice(i, 2, result)
+		ops.splice(i, 1)
+	}
+
+	return nums[0]
+}
+
+/**
+ * Resolves a value that may be a number, expression, or variable.
+ * @param {string} input
+ * @param {HTMLElement} el
+ * @returns {number}
+ */
+function resolveValue(input, el) {
+	const trimmed = input.trim()
+
+	const varMatch = trimmed.match(VARIABLE_RE)
+	if (varMatch) {
+		return getVariable(el, varMatch[1])
+	}
+
+	const exprMatch = trimmed.match(EXPRESSION_RE)
+	if (exprMatch) {
+		return evaluateMath(exprMatch[1], el)
+	}
+
+	const num = Number(trimmed)
+	if (Number.isFinite(num)) {
+		return num
+	}
+
+	throw new Error(`[lx] Cannot resolve value "${input}" on ${describeEl(el)}.`)
 }
 
 /**
@@ -312,33 +557,89 @@ function expandSugarToCanonical(el, containerIds, containerOrderedIds, nodes) {
 		return `#${targetId}.${targetEdge}${sign}${offset}`
 	}
 
+	/**
+	 * Handles position values with explicit references and expression offsets.
+	 * Examples:
+	 * - #id.edge+({gap}*2)
+	 * - #id.edge-({offset}/2)
+	 * - body.edge+({scale}*100)
+	 *
+	 * @param {string} value
+	 * @param {HTMLElement} el
+	 * @returns {string|null} Canonical position value or null if not applicable
+	 */
+	const expandPositionWithExpression = (value, el) => {
+		const exprMatch = value.match(POSITION_EXPR_RE)
+		if (!exprMatch) return null
+
+		const ref = exprMatch[1]
+		const edge = exprMatch[3]
+		const sign = exprMatch[4]
+		const rawExpr = exprMatch[5]
+
+		const exprMatch2 = rawExpr.match(EXPRESSION_RE)
+		if (!exprMatch2) return null
+
+		const evaluated = evaluateMath(exprMatch2[1], el)
+		const signStr = evaluated >= 0 ? '+' : ''
+
+		return `${ref}.${edge}${signStr}${evaluated}`
+	}
+
+	/**
+	 * Converts a position value to canonical form.
+	 * @param {string} value
+	 * @param {'left'|'right'|'top'|'bottom'} edge
+	 * @param {HTMLElement} el
+	 * @returns {string}
+	 */
+	const convertPositionToCanonical = (value, edge, el) => {
+		const expandedExpr = expandPositionWithExpression(value, el)
+		if (expandedExpr) return expandedExpr
+
+		const expanded = expandRelativePosition(value, edge)
+		if (expanded) return expanded
+
+		if (POSITION_RE.test(value)) {
+			return value
+		}
+
+		if (isNumericPosition(value)) {
+			const containerId = findNearestLxAncestor(el, containerIds)
+			return toCanonicalPosition(value, edge, containerId).value
+		}
+
+		const evaluated = resolveValue(value, el)
+		const containerId = findNearestLxAncestor(el, containerIds)
+		const ref = containerId === 'body' ? 'body' : `#${containerId}`
+		const sign = evaluated >= 0 ? '+' : ''
+		return `${ref}.${edge}${sign}${evaluated}`
+	}
+
 	for (const [alias, canonical] of Object.entries(aliasToCanonical)) {
 		if (el.hasAttribute(alias)) {
 			const value = /** @type {string} */ (el.getAttribute(alias))
 			if (positionEdges.includes(canonical)) {
-				const expanded = expandRelativePosition(value, canonical)
-				if (expanded) {
-					result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = {
-						value: expanded,
-						originalAttr: alias,
-					}
-				} else if (isNumericPosition(value)) {
-					const containerId = findNearestLxAncestor(el, containerIds)
-					result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = toCanonicalPosition(
-						value,
-						/** @type {'left'|'right'|'top'|'bottom'} */ (canonical),
-						containerId,
-					)
-				} else {
-					result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = {
-						value,
-						originalAttr: alias,
-					}
+				const canonicalValue = convertPositionToCanonical(value, canonical, el)
+				result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = {
+					value: canonicalValue,
+					originalAttr: alias,
 				}
 			} else {
-				result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = {
-					value,
-					originalAttr: alias,
+				if (RANGE_SIZE_RE.test(value)) {
+					const parts = value.split('/')
+					const min = resolveValue(parts[0], el)
+					const max = resolveValue(parts[1], el)
+					result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = {
+						value: `${min}/${max}`,
+						originalAttr: alias,
+					}
+				} else {
+					const evaluated = resolveValue(value, el)
+					result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = {
+						value: String(evaluated),
+						originalAttr: alias,
+					}
 				}
 			}
 		}
@@ -349,29 +650,26 @@ function expandSugarToCanonical(el, containerIds, containerOrderedIds, nodes) {
 			const edge = attr.replace('lx-', '')
 			const value = /** @type {string} */ (el.getAttribute(attr))
 			if (positionEdges.includes(edge)) {
-				const expanded = expandRelativePosition(value, edge)
-				if (expanded) {
-					result[/** @type {keyof CanonicalAttrMap} */ (edge)] = {
-						value: expanded,
-						originalAttr: attr,
-					}
-				} else if (isNumericPosition(value)) {
-					const containerId = findNearestLxAncestor(el, containerIds)
-					result[/** @type {keyof CanonicalAttrMap} */ (edge)] = toCanonicalPosition(
-						value,
-						/** @type {'left'|'right'|'top'|'bottom'} */ (edge),
-						containerId,
-					)
-				} else {
-					result[/** @type {keyof CanonicalAttrMap} */ (edge)] = {
-						value,
-						originalAttr: attr,
-					}
+				const canonicalValue = convertPositionToCanonical(value, edge, el)
+				result[/** @type {keyof CanonicalAttrMap} */ (edge)] = {
+					value: canonicalValue,
+					originalAttr: attr,
 				}
 			} else {
-				result[/** @type {keyof CanonicalAttrMap} */ (edge)] = {
-					value,
-					originalAttr: attr,
+				if (RANGE_SIZE_RE.test(value)) {
+					const parts = value.split('/')
+					const min = resolveValue(parts[0], el)
+					const max = resolveValue(parts[1], el)
+					result[/** @type {keyof CanonicalAttrMap} */ (edge)] = {
+						value: `${min}/${max}`,
+						originalAttr: attr,
+					}
+				} else {
+					const evaluated = resolveValue(value, el)
+					result[/** @type {keyof CanonicalAttrMap} */ (edge)] = {
+						value: String(evaluated),
+						originalAttr: attr,
+					}
 				}
 			}
 		}

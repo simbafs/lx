@@ -48,8 +48,32 @@
 
 - **固定尺寸**：直接填寫數字（如 `300`）。
 - **範圍尺寸**：使用 `min/max` 語法（如 `200/500`），元素會根據內容自動增長並受到限制。
+- **表達式**：使用 `(expression)` 語法（如 `({base}*2)`）。
 
-### 3. 約束規則 (Constraint Rules)
+### 3. 變數與運算 (Variables & Math)
+
+透過 `data-lx-*` 屬性定義可重複使用的數值，並在表達式中使用：
+
+```html
+<body data-lx-gap="20" data-lx-scale="0.8">
+  <div id="container" lx>
+    <div id="sidebar" lx-l="#main.right+({gap}*2)" lx-t="50" lx-w="300" lx-h="500">
+      帶間距的側邊欄
+    </div>
+    <div id="content" lx-l="0" lx-t="#sidebar.bottom+({gap})" lx-w="100" lx-h="200">
+      使用變數間距定位的內容
+    </div>
+  </div>
+</body>
+```
+
+**支援運算子**：`+`, `-`, `*`, `/`
+
+**變數查找**：變數會從當前元素向上冒泡到 `<body>`。子元素可以覆蓋父元素的值。
+
+**注意**：所有表達式在 `setup()` 階段求值。巢狀括號不支援。
+
+### 4. 約束規則 (Constraint Rules)
 
 為了確保唯一解，每個元素在每個維度（水平與垂直）必須剛好提供 **2 個** 約束：
 

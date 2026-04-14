@@ -50,8 +50,32 @@ Supports `lx-width` (`lx-w`) and `lx-height` (`lx-h`).
 
 - **Fixed Size**: Enter a number directly (e.g., `300`).
 - **Range Size**: Use `min/max` syntax (e.g., `200/500`). The element grows based on content while staying within these limits.
+- **Expression**: Use `(expression)` syntax (e.g., `({base}*2)`).
 
-### 3. Constraint Rules
+### 3. Variables & Math
+
+Define reusable values with `data-lx-*` attributes and use them in expressions:
+
+```html
+<body data-lx-gap="20" data-lx-scale="0.8">
+  <div id="container" lx>
+    <div id="sidebar" lx-l="#main.right+({gap}*2)" lx-t="50" lx-w="300" lx-h="500">
+      Sidebar with gap spacing
+    </div>
+    <div id="content" lx-l="0" lx-t="#sidebar.bottom+({gap})" lx-w="100" lx-h="200">
+      Content positioned with variable gap
+    </div>
+  </div>
+</body>
+```
+
+**Supported operators**: `+`, `-`, `*`, `/`
+
+**Variable lookup**: Variables bubble up from the current element to `<body>`. Child elements can override parent values.
+
+**Note**: All expressions are evaluated during `setup()` phase. Nested parentheses are not supported.
+
+### 4. Constraint Rules
 
 To ensure a unique solution, each element must provide exactly **two** constraints for each dimension (horizontal and vertical):
 

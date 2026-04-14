@@ -261,6 +261,69 @@ lx-h lx-height
 
 ---
 
+## 5.7 Arithmetic Expressions
+
+### 語法
+
+#### 純表達式（作為數值）
+
+    (expression)
+
+#### 帶參考的表達式位移
+
+    #id.edge+(expression)
+    #id.edge-(expression)
+    body.edge+(expression)
+
+#### 表達式
+
+    {variable}         變數引用
+    100+50            加法
+    {gap}*2           乘法
+    ({base}/2)        除法（需括號）
+    100-{offset}      減法
+
+### 語意
+
+- 表達式在 `setup` 階段求值，轉換為最終數值
+- 支援四則運算：`+`, `-`, `*`, `/`
+- **單層括號約束**：巢狀括號如 `((1+2)*3)` 不支援
+- 表達式結果為純數字後，視為一般數值處理
+
+### 錯誤處理
+
+- 除以零：拋出錯誤
+- 無效 token：拋出錯誤
+- 表達式尾部為運算子：拋出錯誤
+
+---
+
+## 5.8 Variable Scope
+
+### 語法
+
+    data-lx-[name]="<number>"
+
+### 語意
+
+- 變數定義在元素的 `data-lx-*` 屬性中
+- **冒泡查找**：從當前元素向上查找直到 `<body>`
+- **就近覆蓋**：子元素優先使用祖先中最近定義的值
+- **Hard Fail**：未定義的變數或非數字值會立即拋出錯誤
+
+### 範例
+
+```html
+<body data-lx-gap="20" data-lx-scale="0.8">
+  <div id="container" lx>
+    <div id="a" lx-l="0" lx-t="0" lx-w="({base}*2)" lx-h="100">a</div>
+    <div id="b" lx-l="0" lx-t="previous.bottom+({gap})" lx-w="100" lx-h="50">b</div>
+  </div>
+</body>
+```
+
+---
+
 # 6. Canonical Transformation
 
 所有 sugar 必須可轉換為：

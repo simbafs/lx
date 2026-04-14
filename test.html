@@ -19,19 +19,19 @@
 			}
 		</style>
 	</head>
-	<body>
+	<body data-lx-gap="25" data-lx-scale="0.8">
 		<div id="screen" lx lx-l="0" lx-t="0" lx-w="1920" lx-h="1080">
-			<div id="main" lx-l="50" lx-t="50" lx-w="1344" lx-h="756">main</div>
+			<div id="main" lx-l="50" lx-t="50" lx-w="(1920*{scale})" lx-h="(1080*{scale})">main</div>
 
-			<div id="sidebar" lx lx-l="#main.right+20" lx-r="#screen.right-50" lx-t="50" lx-h="756">
+			<div id="sidebar" lx lx-l="#main.right+({gap})" lx-r="#screen.right-50" lx-t="50" lx-h="(1080*{scale})">
 				<div id="info" lx-l="#sidebar.left+0" lx-r="0" lx-t="0" lx-h="200/500">info</div>
 
-				<div id="qa" lx-l="0" lx-r="0" lx-t="previous.bottom+20" lx-h="100">qa</div>
+				<div id="qa" lx lx-l="0" lx-r="0" lx-t="#info.bottom+({gap})" lx-h="100">qa</div>
 
-				<div id="logo" lx-l="0" lx-r="0" lx-t="previous.bottom+20" lx-b="0">logo</div>
+				<div id="logo" lx lx-l="0" lx-r="0" lx-t="#qa.bottom+({gap})" lx-b="0">logo</div>
 			</div>
 
-			<div id="ad" lx-l="50" lx-r="-50" lx-t="#main.bottom+20" lx-b="-50">AD</div>
+			<div id="ad" lx-l="50" lx-r="-50" lx-t="#main.bottom+({gap})" lx-b="-50">AD</div>
 		</div>
 
 		<script>

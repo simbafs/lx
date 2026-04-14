@@ -51,6 +51,7 @@
 - #id.right-20
 - previous.bottom+10
 - next.top-20
+- #id.edge+({gap}*2) （表達式）
 
 使用 regex：
 
@@ -59,6 +60,10 @@
 Relative position regex：
 
     /^(previous|next)\.(left|right|top|bottom)([+-]\d+(?:\.\d+)?)?$/
+
+Position with expression regex：
+
+    /^(body|#([A-Za-z_][\w\-:.]*))\.(left|right|top|bottom)([+-])(\(.+\))$/
 
 ### Sugar Expansion (`expandSugarToCanonical`)
 
@@ -69,6 +74,31 @@ Relative position regex：
 3. 計算目標索引（previous = index-1, next = index+1）
 4. 將關鍵字替換為具體的 `#id.edge` 格式
 5. 若邊界條件不符（第一個元素用 previous、最後一個用 next），拋出解析錯誤
+6. 解析並求值表達式（`({variable}*2)` 等）
+
+### Variable & Expression System
+
+#### getVariable(el, name)
+
+- 從當前元素向上冒泡到 `<body>`
+- 查找 `data-lx-[name]` 屬性
+- 若值非數字，拋出錯誤（Hard Fail）
+- 若未找到，拋出 `Undefined variable` 錯誤
+
+#### evaluateMath(expr, el)
+
+- **不使用 eval()**，使用安全 token 解析
+- 先檢查是否有巢狀括號
+- Tokenize：數字、變數（解析為數值）、運算子
+- 兩輪求值：先處理 `*` `/`，再處理 `+` `-`
+- 除以零拋出錯誤
+
+#### resolveValue(input, el)
+
+- 嘗試解析為變數引用 `{name}`
+- 嘗試解析為表達式 `(expr)`
+- 最後嘗試解析為純數字
+- 都失敗則拋出錯誤
 
 ---
 
@@ -77,6 +107,7 @@ Relative position regex：
 支援：
 
 - 固定：300
+- 表達式：({base}*2)
 - 範圍：200/500
 
 ---
