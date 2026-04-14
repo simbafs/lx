@@ -4,6 +4,7 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<script src="./lx.js"></script>
+		<script src="./lx-auto.js"></script>
 		<title>LX demo page</title>
 		<style>
 			div {
@@ -38,12 +39,10 @@
 
 			info.addEventListener('click', () => {
 				info.innerText += ' info'
-				lx.init()
 			})
 
 			info.addEventListener('dblclick', () => {
 				info.innerText = 'info'
-				lx.init()
 			})
 		</script>
 	</body>

@@ -1165,40 +1165,73 @@ function applyResolvedBox(node, box, nodes) {
 
 /**
  * --------------------------------------------------------------------------
+ * Cached State (Module Scope)
+ * --------------------------------------------------------------------------
+ */
+
+/** @type {Map<string, CanonicalNode> | null} */
+let cachedNodesMap = null
+
+/** @type {CanonicalNode[] | null} */
+let cachedOrderedNodes = null
+
+/** @type {boolean} */
+let cachedDebug = false
+
+/**
+ * --------------------------------------------------------------------------
  * Main
  * --------------------------------------------------------------------------
  */
 
 /**
+ * Performs full initialization: collects nodes, validates, detects cycles,
+ * and builds the dependency graph. Call this once on page load or when
+ * the lx-* structure changes.
+ *
  * @param {ParentNode} [root=document.body]
  * @param {InitOptions} [options={}]
  * @returns {void}
  */
-function init(root = document.body, options = {}) {
-	/** @type {boolean} */
-	const debug = Boolean(options.debug)
+function setup(root = document.body, options = {}) {
+	cachedDebug = Boolean(options.debug)
 
-	/** @type {Map<string, CanonicalNode>} */
-	const nodes = collectNodes(root)
+	cachedNodesMap = collectNodes(root)
 
-	validateNodes(nodes)
-	detectCycles(nodes)
+	validateNodes(cachedNodesMap)
+	detectCycles(cachedNodesMap)
 
-	/** @type {CanonicalNode[]} */
-	const ordered = topologicalSort(nodes)
+	cachedOrderedNodes = topologicalSort(cachedNodesMap)
 
-	if (debug) {
-		printCanonicalNodes(nodes)
-		printParsedNodes(nodes)
-		printDependencyOrder(ordered)
+	if (cachedDebug) {
+		printCanonicalNodes(cachedNodesMap)
+		printParsedNodes(cachedNodesMap)
+		printDependencyOrder(cachedOrderedNodes)
 	}
 
-	// Apply base CSS first so DOM has usable dimensions before reading boxes.
+	update()
+}
+
+/**
+ * Performs incremental update: resolves positions and applies CSS based on
+ * cached dependency graph. Does NOT perform any DOM scanning or regex parsing.
+ * Use after viewport changes (resize, scroll) or content changes.
+ *
+ * @returns {void}
+ */
+function update() {
+	if (!cachedNodesMap || !cachedOrderedNodes) {
+		console.warn('[lx] update() called before setup(). Run setup() first.')
+		return
+	}
+
+	const nodes = cachedNodesMap
+	const ordered = cachedOrderedNodes
+
 	for (const node of ordered) {
 		applyBaseSizeCSS(node)
 	}
 
-	// Resolve and apply in dependency order.
 	for (const node of ordered) {
 		/** @type {ResolvedBox} */
 		const box = resolveNode(node, nodes)
@@ -1206,7 +1239,7 @@ function init(root = document.body, options = {}) {
 		applyResolvedBox(node, box, nodes)
 	}
 
-	if (debug) {
+	if (cachedDebug) {
 		printResolvedNodes(nodes)
 		printAppliedCss(nodes)
 	}
@@ -1222,7 +1255,7 @@ function boot() {
 		/** @type {boolean} */
 		const debug = params.has('lx-debug')
 
-		init(document.body, { debug })
+		setup(document.body, { debug })
 	} catch (error) {
 		console.error('%c[lx] Error', 'color:#e74c3c;font-weight:bold;')
 		console.error(error)
@@ -1236,6 +1269,6 @@ if (document.readyState === 'loading') {
 }
 
 /**
- * @type {{ init: (root?: ParentNode, options?: InitOptions) => void }}
+ * @type {{ setup: (root?: ParentNode, options?: InitOptions) => void, update: () => void }}
  */
-window.lx = { init }
+window.lx = { setup, update }
