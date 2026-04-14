@@ -340,6 +340,10 @@ function buildDependencyGraph(elements) {
  * @param {Map<string, ElementData>} elements
  * @param {DependencyGraph} graph
  */
+/**
+ * @param {Map<string, ElementData>} elements
+ * @param {DependencyGraph} graph
+ */
 function solveConstraints(elements, graph) {
     const sortedIds = graph.topologicalSort();
 
@@ -374,16 +378,21 @@ function solveConstraints(elements, graph) {
             resolved.bottom = resolveValue(constraints.bottom.value, getEdge);
         }
 
+        // 尺寸：fixed 直接寫；range 只在第一次尚未量測時先用 max 當暫時值
         if (typeof width === 'number') {
             resolved.width = width;
         } else if (typeof width === 'object' && width) {
-            resolved.width = width.max;
+            if (resolved.width === undefined) {
+                resolved.width = width.max;
+            }
         }
 
         if (typeof height === 'number') {
             resolved.height = height;
         } else if (typeof height === 'object' && height) {
-            resolved.height = height.max;
+            if (resolved.height === undefined) {
+                resolved.height = height.max;
+            }
         }
 
         const hasLeft = resolved.left !== undefined;
@@ -394,24 +403,20 @@ function solveConstraints(elements, graph) {
         const hasHeight = resolved.height !== undefined;
 
         // Horizontal
-        if (hasLeft && hasRight && hasWidth) {
+        if (hasLeft && hasRight) {
             resolved.width = resolved.right - resolved.left;
-        } else if (hasLeft && hasRight && !hasWidth) {
-            resolved.width = resolved.right - resolved.left;
-        } else if (hasLeft && hasWidth && !hasRight) {
+        } else if (hasLeft && hasWidth) {
             resolved.right = resolved.left + resolved.width;
-        } else if (hasRight && hasWidth && !hasLeft) {
+        } else if (hasRight && hasWidth) {
             resolved.left = resolved.right - resolved.width;
         }
 
         // Vertical
-        if (hasTop && hasBottom && hasHeight) {
+        if (hasTop && hasBottom) {
             resolved.height = resolved.bottom - resolved.top;
-        } else if (hasTop && hasBottom && !hasHeight) {
-            resolved.height = resolved.bottom - resolved.top;
-        } else if (hasTop && hasHeight && !hasBottom) {
+        } else if (hasTop && hasHeight) {
             resolved.bottom = resolved.top + resolved.height;
-        } else if (hasBottom && hasHeight && !hasTop) {
+        } else if (hasBottom && hasHeight) {
             resolved.top = resolved.bottom - resolved.height;
         }
     }
@@ -420,18 +425,28 @@ function solveConstraints(elements, graph) {
 /**
  * @param {ElementData} element
  * @param {HTMLElement} el
+ * @returns {boolean}
  */
 function applyContentSize(element, el) {
     const { width, height, resolved } = element;
+    let changed = false;
 
     if (typeof width === 'object' && width) {
         const contentWidth = el.scrollWidth;
-        resolved.width = Math.min(Math.max(contentWidth, width.min), width.max);
+        const nextWidth = Math.min(Math.max(contentWidth, width.min), width.max);
+        if (resolved.width !== nextWidth) {
+            resolved.width = nextWidth;
+            changed = true;
+        }
     }
 
     if (typeof height === 'object' && height) {
         const contentHeight = el.scrollHeight;
-        resolved.height = Math.min(Math.max(contentHeight, height.min), height.max);
+        const nextHeight = Math.min(Math.max(contentHeight, height.min), height.max);
+        if (resolved.height !== nextHeight) {
+            resolved.height = nextHeight;
+            changed = true;
+        }
     }
 
     if (resolved.left !== undefined && resolved.width !== undefined) {
@@ -440,7 +455,55 @@ function applyContentSize(element, el) {
     if (resolved.top !== undefined && resolved.height !== undefined) {
         resolved.bottom = resolved.top + resolved.height;
     }
+
+    return changed;
 }
+
+/**
+ * @param {Map<string, ElementData>} elements
+ */
+function applyIntermediateCSS(elements) {
+    for (const [, element] of elements) {
+        const css = generateCSS(element, elements);
+        const hasPositioning = element.constraints.left || element.constraints.top ||
+                              element.constraints.right || element.constraints.bottom;
+        applyCSS(element.el, css, element.isContainer, hasPositioning);
+    }
+}
+
+/**
+ * @param {Map<string, ElementData>} elements
+ * @param {DependencyGraph} graph
+ */
+function resolveLayout(elements, graph) {
+    const MAX_PASSES = 8;
+
+    // 先給一輪初始解
+    solveConstraints(elements, graph);
+
+    for (let pass = 0; pass < MAX_PASSES; pass++) {
+        // 先把目前解套到 DOM，讓 scrollWidth / scrollHeight 有正確寬度條件
+        applyIntermediateCSS(elements);
+
+        let changed = false;
+
+        for (const [, element] of elements) {
+            if (element.width || element.height) {
+                if (applyContentSize(element, element.el)) {
+                    changed = true;
+                }
+            }
+        }
+
+        // 用新的內容尺寸重解相依元素
+        solveConstraints(elements, graph);
+
+        if (!changed) {
+            break;
+        }
+    }
+}
+
 
 // ============================================================================
 // CSS Generator
@@ -842,13 +905,7 @@ function init(root, options = {}) {
         return { errors };
     }
 
-    solveConstraints(elements, graph);
-
-    for (const [, element] of elements) {
-        if (element.width || element.height) {
-            applyContentSize(element, element.el);
-        }
-    }
+    resolveLayout(elements, graph);
 
     if (options.debug) {
         console.log('%c[lx] Resolved', 'color: #27ae60; font-weight: bold; font-size: 14px;');
@@ -858,7 +915,7 @@ function init(root, options = {}) {
     for (const [, element] of elements) {
         const css = generateCSS(element, elements);
         const hasPositioning = element.constraints.left || element.constraints.top ||
-                              element.constraints.right || element.constraints.bottom;
+            element.constraints.right || element.constraints.bottom;
         applyCSS(element.el, css, element.isContainer, hasPositioning);
     }
 
