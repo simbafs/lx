@@ -104,31 +104,23 @@
  */
 
 /** @type {readonly PositionAttrName[]} */
-const POSITION_ATTRS = /** @type {const} */ ([
-    "lx-left",
-    "lx-right",
-    "lx-top",
-    "lx-bottom",
-]);
+const POSITION_ATTRS = /** @type {const} */ (['lx-left', 'lx-right', 'lx-top', 'lx-bottom'])
 
 /** @type {readonly SizeAttrName[]} */
-const SIZE_ATTRS = /** @type {const} */ ([
-    "lx-width",
-    "lx-height",
-]);
+const SIZE_ATTRS = /** @type {const} */ (['lx-width', 'lx-height'])
 
 /** @type {readonly string[]} */
-const ALL_ATTRS = [...POSITION_ATTRS, ...SIZE_ATTRS];
+const ALL_ATTRS = [...POSITION_ATTRS, ...SIZE_ATTRS]
 
 /** @type {Readonly<Record<string, string>>} */
 const ATTR_ALIASES = Object.freeze({
-    "lx-l": "lx-left",
-    "lx-r": "lx-right",
-    "lx-t": "lx-top",
-    "lx-b": "lx-bottom",
-    "lx-w": "lx-width",
-    "lx-h": "lx-height",
-});
+	'lx-l': 'lx-left',
+	'lx-r': 'lx-right',
+	'lx-t': 'lx-top',
+	'lx-b': 'lx-bottom',
+	'lx-w': 'lx-width',
+	'lx-h': 'lx-height',
+})
 
 /**
  * Matches:
@@ -145,13 +137,13 @@ const ATTR_ALIASES = Object.freeze({
  *
  * @type {RegExp}
  */
-const POSITION_RE = /^(body|#([A-Za-z_][\w\-:.]*))\.(left|right|top|bottom)([+-]\d+(?:\.\d+)?)?$/;
+const POSITION_RE = /^(body|#([A-Za-z_][\w\-:.]*))\.(left|right|top|bottom)([+-]\d+(?:\.\d+)?)?$/
 
 /** @type {RegExp} */
-const FIXED_SIZE_RE = /^-?\d+(?:\.\d+)?$/;
+const FIXED_SIZE_RE = /^-?\d+(?:\.\d+)?$/
 
 /** @type {RegExp} */
-const RANGE_SIZE_RE = /^(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/;
+const RANGE_SIZE_RE = /^(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/
 
 /**
  * --------------------------------------------------------------------------
@@ -164,8 +156,8 @@ const RANGE_SIZE_RE = /^(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/;
  * @returns {string}
  */
 function describeEl(el) {
-    const id = el.id ? ` id="${el.id}"` : "";
-    return `<${el.tagName.toLowerCase()}${id}>`;
+	const id = el.id ? ` id="${el.id}"` : ''
+	return `<${el.tagName.toLowerCase()}${id}>`
 }
 
 /**
@@ -173,10 +165,10 @@ function describeEl(el) {
  * @returns {el is HTMLElement}
  */
 function hasLxAttrs(el) {
-    if (!(el instanceof HTMLElement)) return false;
-    if (el.hasAttribute("lx")) return true;
-    if (ALL_ATTRS.some((attr) => el.hasAttribute(attr))) return true;
-    return Object.keys(ATTR_ALIASES).some((alias) => el.hasAttribute(alias));
+	if (!(el instanceof HTMLElement)) return false
+	if (el.hasAttribute('lx')) return true
+	if (ALL_ATTRS.some(attr => el.hasAttribute(attr))) return true
+	return Object.keys(ATTR_ALIASES).some(alias => el.hasAttribute(alias))
 }
 
 /**
@@ -207,7 +199,7 @@ function hasLxAttrs(el) {
  * @returns {boolean}
  */
 function isNumericPosition(value) {
-    return FIXED_SIZE_RE.test(value);
+	return FIXED_SIZE_RE.test(value)
 }
 
 /**
@@ -218,13 +210,13 @@ function isNumericPosition(value) {
  * @returns {CanonicalAttr}
  */
 function toCanonicalPosition(value, edge, containerId) {
-    const offset = parseNumber(value, `numeric position`);
-    const ref = containerId === "body" ? "body" : `#${containerId}`;
-    const sign = offset >= 0 ? "+" : "";
-    return {
-        value: `${ref}.${edge}${sign}${offset}`,
-        originalAttr: value,
-    };
+	const offset = parseNumber(value, `numeric position`)
+	const ref = containerId === 'body' ? 'body' : `#${containerId}`
+	const sign = offset >= 0 ? '+' : ''
+	return {
+		value: `${ref}.${edge}${sign}${offset}`,
+		originalAttr: value,
+	}
 }
 
 /**
@@ -234,14 +226,14 @@ function toCanonicalPosition(value, edge, containerId) {
  * @returns {string}
  */
 function findNearestLxAncestor(el, containerIds) {
-    let current = /** @type {HTMLElement|null} */ (el.parentElement);
-    while (current) {
-        if (current.id && containerIds.has(current.id)) {
-            return current.id;
-        }
-        current = /** @type {HTMLElement|null} */ (current.parentElement);
-    }
-    return "body";
+	let current = /** @type {HTMLElement|null} */ (el.parentElement)
+	while (current) {
+		if (current.id && containerIds.has(current.id)) {
+			return current.id
+		}
+		current = /** @type {HTMLElement|null} */ (current.parentElement)
+	}
+	return 'body'
 }
 
 /**
@@ -251,69 +243,75 @@ function findNearestLxAncestor(el, containerIds) {
  * @returns {CanonicalAttrMap}
  */
 function expandSugarToCanonical(el, containerIds) {
-    /** @type {CanonicalAttrMap} */
-    const result = {};
+	/** @type {CanonicalAttrMap} */
+	const result = {}
 
-    const aliasToCanonical = {
-        "lx-l": "left",
-        "lx-r": "right",
-        "lx-t": "top",
-        "lx-b": "bottom",
-        "lx-w": "width",
-        "lx-h": "height",
-    };
+	const aliasToCanonical = {
+		'lx-l': 'left',
+		'lx-r': 'right',
+		'lx-t': 'top',
+		'lx-b': 'bottom',
+		'lx-w': 'width',
+		'lx-h': 'height',
+	}
 
-    const positionEdges = ["left", "right", "top", "bottom"];
-    const sizeEdges = ["width", "height"];
+	const positionEdges = ['left', 'right', 'top', 'bottom']
+	const sizeEdges = ['width', 'height']
 
-    for (const [alias, canonical] of Object.entries(aliasToCanonical)) {
-        if (el.hasAttribute(alias)) {
-            const value = /** @type {string} */ (el.getAttribute(alias));
-            if (positionEdges.includes(canonical)) {
-                if (isNumericPosition(value)) {
-                    const containerId = findNearestLxAncestor(el, containerIds);
-                    result[/** @type {keyof CanonicalAttrMap} */ (canonical)] =
-                        toCanonicalPosition(value, /** @type {'left'|'right'|'top'|'bottom'} */ (canonical), containerId);
-                } else {
-                    result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = {
-                        value,
-                        originalAttr: alias,
-                    };
-                }
-            } else {
-                result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = {
-                    value,
-                    originalAttr: alias,
-                };
-            }
-        }
-    }
+	for (const [alias, canonical] of Object.entries(aliasToCanonical)) {
+		if (el.hasAttribute(alias)) {
+			const value = /** @type {string} */ (el.getAttribute(alias))
+			if (positionEdges.includes(canonical)) {
+				if (isNumericPosition(value)) {
+					const containerId = findNearestLxAncestor(el, containerIds)
+					result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = toCanonicalPosition(
+						value,
+						/** @type {'left'|'right'|'top'|'bottom'} */ (canonical),
+						containerId,
+					)
+				} else {
+					result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = {
+						value,
+						originalAttr: alias,
+					}
+				}
+			} else {
+				result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = {
+					value,
+					originalAttr: alias,
+				}
+			}
+		}
+	}
 
-    for (const attr of ALL_ATTRS) {
-        if (el.hasAttribute(attr)) {
-            const edge = attr.replace("lx-", "");
-            const value = /** @type {string} */ (el.getAttribute(attr));
-            if (positionEdges.includes(edge)) {
-                if (isNumericPosition(value)) {
-                    const containerId = findNearestLxAncestor(el, containerIds);
-                    result[/** @type {keyof CanonicalAttrMap} */ (edge)] =
-                        toCanonicalPosition(value, /** @type {'left'|'right'|'top'|'bottom'} */ (edge), containerId);
-                } else {
-                    result[/** @type {keyof CanonicalAttrMap} */ (edge)] = {
-                        value,
-                        originalAttr: attr,
-                    };
-                }
-            } else {
-                result[/** @type {keyof CanonicalAttrMap} */ (edge)] = {
-                    value,
-                    originalAttr: attr,
-                };
-            }
-        }
-    }
+	for (const attr of ALL_ATTRS) {
+		if (el.hasAttribute(attr)) {
+			const edge = attr.replace('lx-', '')
+			const value = /** @type {string} */ (el.getAttribute(attr))
+			if (positionEdges.includes(edge)) {
+				if (isNumericPosition(value)) {
+					const containerId = findNearestLxAncestor(el, containerIds)
+					result[/** @type {keyof CanonicalAttrMap} */ (edge)] = toCanonicalPosition(
+						value,
+						/** @type {'left'|'right'|'top'|'bottom'} */ (edge),
+						containerId,
+					)
+				} else {
+					result[/** @type {keyof CanonicalAttrMap} */ (edge)] = {
+						value,
+						originalAttr: attr,
+					}
+				}
+			} else {
+				result[/** @type {keyof CanonicalAttrMap} */ (edge)] = {
+					value,
+					originalAttr: attr,
+				}
+			}
+		}
+	}
 
-    return result;
+	return result
 }
 
 /**
@@ -321,7 +319,7 @@ function expandSugarToCanonical(el, containerIds) {
  * @returns {string}
  */
 function px(value) {
-    return `${value}px`;
+	return `${value}px`
 }
 
 /**
@@ -330,11 +328,11 @@ function px(value) {
  * @returns {number}
  */
 function parseNumber(raw, context) {
-    const n = Number(raw);
-    if (!Number.isFinite(n)) {
-        throw new Error(`[lx] Invalid number "${raw}" in ${context}`);
-    }
-    return n;
+	const n = Number(raw)
+	if (!Number.isFinite(n)) {
+		throw new Error(`[lx] Invalid number "${raw}" in ${context}`)
+	}
+	return n
 }
 
 /**
@@ -342,33 +340,33 @@ function parseNumber(raw, context) {
  * @returns {ResolvedBox}
  */
 function cloneRect(rect) {
-    return {
-        left: rect.left,
-        right: rect.right,
-        top: rect.top,
-        bottom: rect.bottom,
-        width: rect.width,
-        height: rect.height,
-    };
+	return {
+		left: rect.left,
+		right: rect.right,
+		top: rect.top,
+		bottom: rect.bottom,
+		width: rect.width,
+		height: rect.height,
+	}
 }
 
 /**
  * @returns {ResolvedBox}
  */
 function getBodyBox() {
-    /** @type {number} */
-    const width = document.documentElement.clientWidth;
-    /** @type {number} */
-    const height = document.documentElement.clientHeight;
+	/** @type {number} */
+	const width = document.documentElement.clientWidth
+	/** @type {number} */
+	const height = document.documentElement.clientHeight
 
-    return {
-        left: 0,
-        top: 0,
-        right: width,
-        bottom: height,
-        width,
-        height,
-    };
+	return {
+		left: 0,
+		top: 0,
+		right: width,
+		bottom: height,
+		width,
+		height,
+	}
 }
 
 /**
@@ -376,9 +374,9 @@ function getBodyBox() {
  * @returns {ResolvedBox}
  */
 function readElementBox(el) {
-    /** @type {DOMRect} */
-    const rect = el.getBoundingClientRect();
-    return cloneRect(rect);
+	/** @type {DOMRect} */
+	const rect = el.getBoundingClientRect()
+	return cloneRect(rect)
 }
 
 /**
@@ -388,7 +386,7 @@ function readElementBox(el) {
  * @returns {number}
  */
 function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
+	return Math.max(min, Math.min(max, value))
 }
 
 /**
@@ -396,11 +394,11 @@ function clamp(value, min, max) {
  * @param {string} [prefix]
  * @returns {string}
  */
-function indent(text, prefix = "  ") {
-    return text
-        .split("\n")
-        .map((line) => (line ? prefix + line : line))
-        .join("\n");
+function indent(text, prefix = '  ') {
+	return text
+		.split('\n')
+		.map(line => (line ? prefix + line : line))
+		.join('\n')
 }
 
 /**
@@ -408,13 +406,13 @@ function indent(text, prefix = "  ") {
  * @returns {string}
  */
 function formatPositionExpr(expr) {
-    if (!expr) return "";
+	if (!expr) return ''
 
-    if (expr.type === "body-ref") {
-        return `body.${expr.edge}${expr.offset >= 0 ? "+" : ""}${expr.offset}`;
-    }
+	if (expr.type === 'body-ref') {
+		return `body.${expr.edge}${expr.offset >= 0 ? '+' : ''}${expr.offset}`
+	}
 
-    return `#${expr.targetId}.${expr.edge}${expr.offset >= 0 ? "+" : ""}${expr.offset}`;
+	return `#${expr.targetId}.${expr.edge}${expr.offset >= 0 ? '+' : ''}${expr.offset}`
 }
 
 /**
@@ -422,13 +420,13 @@ function formatPositionExpr(expr) {
  * @returns {string}
  */
 function formatSizeExpr(expr) {
-    if (!expr) return "";
+	if (!expr) return ''
 
-    if (expr.type === "fixed") {
-        return String(expr.value);
-    }
+	if (expr.type === 'fixed') {
+		return String(expr.value)
+	}
 
-    return `${expr.min}/${expr.max}`;
+	return `${expr.min}/${expr.max}`
 }
 
 /**
@@ -445,16 +443,18 @@ function formatSizeExpr(expr) {
  * }}
  */
 function canonicalRow(node) {
-    return {
-        id: `#${node.id}`,
-        left: formatPositionExpr(node.left),
-        right: formatPositionExpr(node.right),
-        top: formatPositionExpr(node.top),
-        bottom: formatPositionExpr(node.bottom),
-        width: formatSizeExpr(node.width),
-        height: formatSizeExpr(node.height),
-        refs: Array.from(node.refs).map((id) => `#${id}`).join(", "),
-    };
+	return {
+		id: `#${node.id}`,
+		left: formatPositionExpr(node.left),
+		right: formatPositionExpr(node.right),
+		top: formatPositionExpr(node.top),
+		bottom: formatPositionExpr(node.bottom),
+		width: formatSizeExpr(node.width),
+		height: formatSizeExpr(node.height),
+		refs: Array.from(node.refs)
+			.map(id => `#${id}`)
+			.join(', '),
+	}
 }
 
 /**
@@ -470,15 +470,15 @@ function canonicalRow(node) {
  * }}
  */
 function resolvedRow(node) {
-    return {
-        id: `#${node.id}`,
-        left: node.resolved ? node.resolved.left : "",
-        top: node.resolved ? node.resolved.top : "",
-        right: node.resolved ? node.resolved.right : "",
-        bottom: node.resolved ? node.resolved.bottom : "",
-        width: node.resolved ? node.resolved.width : "",
-        height: node.resolved ? node.resolved.height : "",
-    };
+	return {
+		id: `#${node.id}`,
+		left: node.resolved ? node.resolved.left : '',
+		top: node.resolved ? node.resolved.top : '',
+		right: node.resolved ? node.resolved.right : '',
+		bottom: node.resolved ? node.resolved.bottom : '',
+		width: node.resolved ? node.resolved.width : '',
+		height: node.resolved ? node.resolved.height : '',
+	}
 }
 
 /**
@@ -486,15 +486,15 @@ function resolvedRow(node) {
  * @returns {void}
  */
 function printParsedNodes(nodes) {
-    /** @type {ReturnType<typeof canonicalRow>[]} */
-    const rows = [];
+	/** @type {ReturnType<typeof canonicalRow>[]} */
+	const rows = []
 
-    for (const [, node] of nodes) {
-        rows.push(canonicalRow(node));
-    }
+	for (const [, node] of nodes) {
+		rows.push(canonicalRow(node))
+	}
 
-    console.log("%c[lx] Parsed canonical nodes", "color:#3498db;font-weight:bold;");
-    console.table(rows);
+	console.log('%c[lx] Parsed canonical nodes', 'color:#3498db;font-weight:bold;')
+	console.table(rows)
 }
 
 /**
@@ -510,15 +510,15 @@ function printParsedNodes(nodes) {
  * }}
  */
 function canonicalAttrsRow(node) {
-    return {
-        id: `#${node.id}`,
-        left: node.canonicalAttrs.left?.value ?? "",
-        right: node.canonicalAttrs.right?.value ?? "",
-        top: node.canonicalAttrs.top?.value ?? "",
-        bottom: node.canonicalAttrs.bottom?.value ?? "",
-        width: node.canonicalAttrs.width?.value ?? "",
-        height: node.canonicalAttrs.height?.value ?? "",
-    };
+	return {
+		id: `#${node.id}`,
+		left: node.canonicalAttrs.left?.value ?? '',
+		right: node.canonicalAttrs.right?.value ?? '',
+		top: node.canonicalAttrs.top?.value ?? '',
+		bottom: node.canonicalAttrs.bottom?.value ?? '',
+		width: node.canonicalAttrs.width?.value ?? '',
+		height: node.canonicalAttrs.height?.value ?? '',
+	}
 }
 
 /**
@@ -526,15 +526,15 @@ function canonicalAttrsRow(node) {
  * @returns {void}
  */
 function printCanonicalNodes(nodes) {
-    /** @type {ReturnType<typeof canonicalAttrsRow>[]} */
-    const rows = [];
+	/** @type {ReturnType<typeof canonicalAttrsRow>[]} */
+	const rows = []
 
-    for (const [, node] of nodes) {
-        rows.push(canonicalAttrsRow(node));
-    }
+	for (const [, node] of nodes) {
+		rows.push(canonicalAttrsRow(node))
+	}
 
-    console.log("%c[lx] Canonical called", "color:#e74c3c;font-weight:bold;");
-    console.table(rows);
+	console.log('%c[lx] Canonical called', 'color:#e74c3c;font-weight:bold;')
+	console.table(rows)
 }
 
 /**
@@ -542,8 +542,8 @@ function printCanonicalNodes(nodes) {
  * @returns {void}
  */
 function printDependencyOrder(ordered) {
-    console.log("%c[lx] Dependency order", "color:#9b59b6;font-weight:bold;");
-    console.log(ordered.map((node) => `#${node.id}`).join(" -> "));
+	console.log('%c[lx] Dependency order', 'color:#9b59b6;font-weight:bold;')
+	console.log(ordered.map(node => `#${node.id}`).join(' -> '))
 }
 
 /**
@@ -551,15 +551,15 @@ function printDependencyOrder(ordered) {
  * @returns {void}
  */
 function printResolvedNodes(nodes) {
-    /** @type {ReturnType<typeof resolvedRow>[]} */
-    const rows = [];
+	/** @type {ReturnType<typeof resolvedRow>[]} */
+	const rows = []
 
-    for (const [, node] of nodes) {
-        rows.push(resolvedRow(node));
-    }
+	for (const [, node] of nodes) {
+		rows.push(resolvedRow(node))
+	}
 
-    console.log("%c[lx] Resolved boxes", "color:#27ae60;font-weight:bold;");
-    console.table(rows);
+	console.log('%c[lx] Resolved boxes', 'color:#27ae60;font-weight:bold;')
+	console.table(rows)
 }
 
 /**
@@ -573,13 +573,13 @@ function printResolvedNodes(nodes) {
  * }}
  */
 function appliedCssRow(node) {
-    return {
-        id: `#${node.id}`,
-        cssLeft: node.el.style.left || "",
-        cssTop: node.el.style.top || "",
-        cssWidth: node.el.style.width || "",
-        cssHeight: node.el.style.height || "",
-    };
+	return {
+		id: `#${node.id}`,
+		cssLeft: node.el.style.left || '',
+		cssTop: node.el.style.top || '',
+		cssWidth: node.el.style.width || '',
+		cssHeight: node.el.style.height || '',
+	}
 }
 
 /**
@@ -587,15 +587,15 @@ function appliedCssRow(node) {
  * @returns {void}
  */
 function printAppliedCss(nodes) {
-    /** @type {ReturnType<typeof appliedCssRow>[]} */
-    const rows = [];
+	/** @type {ReturnType<typeof appliedCssRow>[]} */
+	const rows = []
 
-    for (const [, node] of nodes) {
-        rows.push(appliedCssRow(node));
-    }
+	for (const [, node] of nodes) {
+		rows.push(appliedCssRow(node))
+	}
 
-    console.log("%c[lx] Applied CSS", "color:#e67e22;font-weight:bold;");
-    console.table(rows);
+	console.log('%c[lx] Applied CSS', 'color:#e67e22;font-weight:bold;')
+	console.table(rows)
 }
 
 /**
@@ -607,17 +607,17 @@ function printAppliedCss(nodes) {
  * @returns {CanonicalNode | null}
  */
 function findContainingBlock(node, nodes) {
-    /** @type {HTMLElement | null} */
-    let current = node.el.parentElement;
+	/** @type {HTMLElement | null} */
+	let current = node.el.parentElement
 
-    while (current && current !== document.body) {
-        if (current.id && nodes.has(current.id)) {
-            return /** @type {CanonicalNode} */ (nodes.get(current.id));
-        }
-        current = current.parentElement;
-    }
+	while (current && current !== document.body) {
+		if (current.id && nodes.has(current.id)) {
+			return /** @type {CanonicalNode} */ (nodes.get(current.id))
+		}
+		current = current.parentElement
+	}
 
-    return null;
+	return null
 }
 
 /**
@@ -633,48 +633,47 @@ function findContainingBlock(node, nodes) {
  * @returns {PositionExpr}
  */
 function parsePositionExpr(raw, attrName, el) {
-    /** @type {string} */
-    const value = String(raw).trim();
+	/** @type {string} */
+	const value = String(raw).trim()
 
-    /** @type {RegExpMatchArray | null} */
-    const match = value.match(POSITION_RE);
+	/** @type {RegExpMatchArray | null} */
+	const match = value.match(POSITION_RE)
 
-    if (!match) {
-        throw new Error(
-            `[lx] Invalid ${attrName}="${value}" on ${describeEl(el)}. ` +
-            `Expected "body.edge+N" or "#id.edge+N".`
-        );
-    }
+	if (!match) {
+		throw new Error(
+			`[lx] Invalid ${attrName}="${value}" on ${describeEl(el)}. ` + `Expected "body.edge+N" or "#id.edge+N".`,
+		)
+	}
 
-    /** @type {string} */
-    const targetToken = match[1];
-    /** @type {string | null} */
-    const targetId = match[2] || null;
-    /** @type {Edge} */
-    const edge = /** @type {Edge} */ (match[3]);
-    /** @type {number} */
-    const offset = match[4] ? Number(match[4]) : 0;
+	/** @type {string} */
+	const targetToken = match[1]
+	/** @type {string | null} */
+	const targetId = match[2] || null
+	/** @type {Edge} */
+	const edge = /** @type {Edge} */ (match[3])
+	/** @type {number} */
+	const offset = match[4] ? Number(match[4]) : 0
 
-    if (targetToken === "body") {
-        /** @type {BodyPositionExpr} */
-        const expr = {
-            type: "body-ref",
-            edge,
-            offset,
-            raw: value,
-        };
-        return expr;
-    }
+	if (targetToken === 'body') {
+		/** @type {BodyPositionExpr} */
+		const expr = {
+			type: 'body-ref',
+			edge,
+			offset,
+			raw: value,
+		}
+		return expr
+	}
 
-    /** @type {ElementPositionExpr} */
-    const expr = {
-        type: "element-ref",
-        targetId: /** @type {string} */ (targetId),
-        edge,
-        offset,
-        raw: value,
-    };
-    return expr;
+	/** @type {ElementPositionExpr} */
+	const expr = {
+		type: 'element-ref',
+		targetId: /** @type {string} */ (targetId),
+		edge,
+		offset,
+		raw: value,
+	}
+	return expr
 }
 
 /**
@@ -684,47 +683,42 @@ function parsePositionExpr(raw, attrName, el) {
  * @returns {SizeExpr}
  */
 function parseSizeExpr(raw, attrName, el) {
-    /** @type {string} */
-    const value = String(raw).trim();
+	/** @type {string} */
+	const value = String(raw).trim()
 
-    if (FIXED_SIZE_RE.test(value)) {
-        /** @type {FixedSizeExpr} */
-        const expr = {
-            type: "fixed",
-            value: Number(value),
-            raw: value,
-        };
-        return expr;
-    }
+	if (FIXED_SIZE_RE.test(value)) {
+		/** @type {FixedSizeExpr} */
+		const expr = {
+			type: 'fixed',
+			value: Number(value),
+			raw: value,
+		}
+		return expr
+	}
 
-    /** @type {RegExpMatchArray | null} */
-    const rangeMatch = value.match(RANGE_SIZE_RE);
-    if (rangeMatch) {
-        /** @type {number} */
-        const min = Number(rangeMatch[1]);
-        /** @type {number} */
-        const max = Number(rangeMatch[2]);
+	/** @type {RegExpMatchArray | null} */
+	const rangeMatch = value.match(RANGE_SIZE_RE)
+	if (rangeMatch) {
+		/** @type {number} */
+		const min = Number(rangeMatch[1])
+		/** @type {number} */
+		const max = Number(rangeMatch[2])
 
-        if (min > max) {
-            throw new Error(
-                `[lx] Invalid ${attrName}="${value}" on ${describeEl(el)}: min > max.`
-            );
-        }
+		if (min > max) {
+			throw new Error(`[lx] Invalid ${attrName}="${value}" on ${describeEl(el)}: min > max.`)
+		}
 
-        /** @type {RangeSizeExpr} */
-        const expr = {
-            type: "range",
-            min,
-            max,
-            raw: value,
-        };
-        return expr;
-    }
+		/** @type {RangeSizeExpr} */
+		const expr = {
+			type: 'range',
+			min,
+			max,
+			raw: value,
+		}
+		return expr
+	}
 
-    throw new Error(
-        `[lx] Invalid ${attrName}="${value}" on ${describeEl(el)}. ` +
-        `Expected "300" or "200/500".`
-    );
+	throw new Error(`[lx] Invalid ${attrName}="${value}" on ${describeEl(el)}. ` + `Expected "300" or "200/500".`)
 }
 
 /**
@@ -738,70 +732,54 @@ function parseSizeExpr(raw, attrName, el) {
  * @returns {Map<string, CanonicalNode>}
  */
 function collectNodes(root) {
-    /** @type {HTMLElement[]} */
-    const elements = Array.from(root.querySelectorAll("*")).filter(hasLxAttrs);
+	/** @type {HTMLElement[]} */
+	const elements = Array.from(root.querySelectorAll('*')).filter(hasLxAttrs)
 
-    /** @type {Set<string>} */
-    const containerIds = new Set();
+	/** @type {Set<string>} */
+	const containerIds = new Set()
 
-    for (const el of elements) {
-        if (el.hasAttribute("lx")) {
-            if (!el.id) {
-                throw new Error(
-                    `[lx] Container elements with lx attribute must have an id: ${describeEl(el)}`
-                );
-            }
-            containerIds.add(el.id);
-        }
-    }
+	for (const el of elements) {
+		if (el.hasAttribute('lx')) {
+			if (!el.id) {
+				throw new Error(`[lx] Container elements with lx attribute must have an id: ${describeEl(el)}`)
+			}
+			containerIds.add(el.id)
+		}
+	}
 
-    /** @type {Map<string, CanonicalNode>} */
-    const nodes = new Map();
+	/** @type {Map<string, CanonicalNode>} */
+	const nodes = new Map()
 
-    for (const el of elements) {
-        if (!el.id) {
-            throw new Error(
-                `[lx] Elements with lx-* attributes must have an id: ${describeEl(el)}`
-            );
-        }
+	for (const el of elements) {
+		if (!el.id) {
+			throw new Error(`[lx] Elements with lx-* attributes must have an id: ${describeEl(el)}`)
+		}
 
-        if (nodes.has(el.id)) {
-            throw new Error(`[lx] Duplicate id "${el.id}".`);
-        }
+		if (nodes.has(el.id)) {
+			throw new Error(`[lx] Duplicate id "${el.id}".`)
+		}
 
-        const canonicalAttrs = expandSugarToCanonical(el, containerIds);
+		const canonicalAttrs = expandSugarToCanonical(el, containerIds)
 
-        /** @type {CanonicalNode} */
-        const node = {
-            id: el.id,
-            el,
-            left: canonicalAttrs.left
-                ? parsePositionExpr(canonicalAttrs.left.value, "lx-left", el)
-                : null,
-            right: canonicalAttrs.right
-                ? parsePositionExpr(canonicalAttrs.right.value, "lx-right", el)
-                : null,
-            top: canonicalAttrs.top
-                ? parsePositionExpr(canonicalAttrs.top.value, "lx-top", el)
-                : null,
-            bottom: canonicalAttrs.bottom
-                ? parsePositionExpr(canonicalAttrs.bottom.value, "lx-bottom", el)
-                : null,
-            width: canonicalAttrs.width
-                ? parseSizeExpr(canonicalAttrs.width.value, "lx-width", el)
-                : null,
-            height: canonicalAttrs.height
-                ? parseSizeExpr(canonicalAttrs.height.value, "lx-height", el)
-                : null,
-            refs: new Set(),
-            resolved: null,
-            canonicalAttrs,
-        };
+		/** @type {CanonicalNode} */
+		const node = {
+			id: el.id,
+			el,
+			left: canonicalAttrs.left ? parsePositionExpr(canonicalAttrs.left.value, 'lx-left', el) : null,
+			right: canonicalAttrs.right ? parsePositionExpr(canonicalAttrs.right.value, 'lx-right', el) : null,
+			top: canonicalAttrs.top ? parsePositionExpr(canonicalAttrs.top.value, 'lx-top', el) : null,
+			bottom: canonicalAttrs.bottom ? parsePositionExpr(canonicalAttrs.bottom.value, 'lx-bottom', el) : null,
+			width: canonicalAttrs.width ? parseSizeExpr(canonicalAttrs.width.value, 'lx-width', el) : null,
+			height: canonicalAttrs.height ? parseSizeExpr(canonicalAttrs.height.value, 'lx-height', el) : null,
+			refs: new Set(),
+			resolved: null,
+			canonicalAttrs,
+		}
 
-        nodes.set(node.id, node);
-    }
+		nodes.set(node.id, node)
+	}
 
-    return nodes;
+	return nodes
 }
 
 /**
@@ -815,54 +793,44 @@ function collectNodes(root) {
  * @returns {void}
  */
 function validateNodes(nodes) {
-    for (const [, node] of nodes) {
-        /** @type {number} */
-        const horizontalCount =
-            Number(node.left !== null) +
-            Number(node.right !== null) +
-            Number(node.width !== null);
+	for (const [, node] of nodes) {
+		/** @type {number} */
+		const horizontalCount = Number(node.left !== null) + Number(node.right !== null) + Number(node.width !== null)
 
-        /** @type {number} */
-        const verticalCount =
-            Number(node.top !== null) +
-            Number(node.bottom !== null) +
-            Number(node.height !== null);
+		/** @type {number} */
+		const verticalCount = Number(node.top !== null) + Number(node.bottom !== null) + Number(node.height !== null)
 
-        if (horizontalCount !== 2) {
-            throw new Error(
-                `[lx] ${describeEl(node.el)} must have exactly 2 horizontal constraints ` +
-                `(lx-left, lx-right, lx-width).`
-            );
-        }
+		if (horizontalCount !== 2) {
+			throw new Error(
+				`[lx] ${describeEl(node.el)} must have exactly 2 horizontal constraints ` +
+					`(lx-left, lx-right, lx-width).`,
+			)
+		}
 
-        if (verticalCount !== 2) {
-            throw new Error(
-                `[lx] ${describeEl(node.el)} must have exactly 2 vertical constraints ` +
-                `(lx-top, lx-bottom, lx-height).`
-            );
-        }
+		if (verticalCount !== 2) {
+			throw new Error(
+				`[lx] ${describeEl(node.el)} must have exactly 2 vertical constraints ` +
+					`(lx-top, lx-bottom, lx-height).`,
+			)
+		}
 
-        if (node.width?.type === "range" && node.height?.type === "range") {
-            throw new Error(
-                `[lx] ${describeEl(node.el)} cannot use range for both lx-width and lx-height.`
-            );
-        }
+		if (node.width?.type === 'range' && node.height?.type === 'range') {
+			throw new Error(`[lx] ${describeEl(node.el)} cannot use range for both lx-width and lx-height.`)
+		}
 
-        /** @type {(PositionExpr | null)[]} */
-        const positionExprs = [node.left, node.right, node.top, node.bottom];
-        for (const expr of positionExprs) {
-            if (!expr) continue;
+		/** @type {(PositionExpr | null)[]} */
+		const positionExprs = [node.left, node.right, node.top, node.bottom]
+		for (const expr of positionExprs) {
+			if (!expr) continue
 
-            if (expr.type === "element-ref") {
-                if (!nodes.has(expr.targetId)) {
-                    throw new Error(
-                        `[lx] ${describeEl(node.el)} references missing id "#${expr.targetId}".`
-                    );
-                }
-                node.refs.add(expr.targetId);
-            }
-        }
-    }
+			if (expr.type === 'element-ref') {
+				if (!nodes.has(expr.targetId)) {
+					throw new Error(`[lx] ${describeEl(node.el)} references missing id "#${expr.targetId}".`)
+				}
+				node.refs.add(expr.targetId)
+			}
+		}
+	}
 }
 
 /**
@@ -870,51 +838,49 @@ function validateNodes(nodes) {
  * @returns {void}
  */
 function detectCycles(nodes) {
-    /** @type {Set<string>} */
-    const visiting = new Set();
-    /** @type {Set<string>} */
-    const visited = new Set();
-    /** @type {string[]} */
-    const path = [];
+	/** @type {Set<string>} */
+	const visiting = new Set()
+	/** @type {Set<string>} */
+	const visited = new Set()
+	/** @type {string[]} */
+	const path = []
 
-    /**
-     * @param {string} id
-     * @returns {void}
-     */
-    function dfs(id) {
-        if (visited.has(id)) return;
+	/**
+	 * @param {string} id
+	 * @returns {void}
+	 */
+	function dfs(id) {
+		if (visited.has(id)) return
 
-        if (visiting.has(id)) {
-            /** @type {number} */
-            const cycleStart = path.indexOf(id);
-            /** @type {string} */
-            const cycle = [...path.slice(cycleStart), id]
-                .map((x) => `#${x}`)
-                .join(" -> ");
-            throw new Error(`[lx] Circular dependency detected: ${cycle}`);
-        }
+		if (visiting.has(id)) {
+			/** @type {number} */
+			const cycleStart = path.indexOf(id)
+			/** @type {string} */
+			const cycle = [...path.slice(cycleStart), id].map(x => `#${x}`).join(' -> ')
+			throw new Error(`[lx] Circular dependency detected: ${cycle}`)
+		}
 
-        visiting.add(id);
-        path.push(id);
+		visiting.add(id)
+		path.push(id)
 
-        /** @type {CanonicalNode | undefined} */
-        const node = nodes.get(id);
-        if (!node) {
-            throw new Error(`[lx] Internal error: node "${id}" not found.`);
-        }
+		/** @type {CanonicalNode | undefined} */
+		const node = nodes.get(id)
+		if (!node) {
+			throw new Error(`[lx] Internal error: node "${id}" not found.`)
+		}
 
-        for (const dep of node.refs) {
-            dfs(dep);
-        }
+		for (const dep of node.refs) {
+			dfs(dep)
+		}
 
-        path.pop();
-        visiting.delete(id);
-        visited.add(id);
-    }
+		path.pop()
+		visiting.delete(id)
+		visited.add(id)
+	}
 
-    for (const id of nodes.keys()) {
-        dfs(id);
-    }
+	for (const id of nodes.keys()) {
+		dfs(id)
+	}
 }
 
 /**
@@ -922,37 +888,37 @@ function detectCycles(nodes) {
  * @returns {CanonicalNode[]}
  */
 function topologicalSort(nodes) {
-    /** @type {CanonicalNode[]} */
-    const ordered = [];
-    /** @type {Set<string>} */
-    const visited = new Set();
+	/** @type {CanonicalNode[]} */
+	const ordered = []
+	/** @type {Set<string>} */
+	const visited = new Set()
 
-    /**
-     * @param {string} id
-     * @returns {void}
-     */
-    function visit(id) {
-        if (visited.has(id)) return;
-        visited.add(id);
+	/**
+	 * @param {string} id
+	 * @returns {void}
+	 */
+	function visit(id) {
+		if (visited.has(id)) return
+		visited.add(id)
 
-        /** @type {CanonicalNode | undefined} */
-        const node = nodes.get(id);
-        if (!node) {
-            throw new Error(`[lx] Internal error: node "${id}" not found.`);
-        }
+		/** @type {CanonicalNode | undefined} */
+		const node = nodes.get(id)
+		if (!node) {
+			throw new Error(`[lx] Internal error: node "${id}" not found.`)
+		}
 
-        for (const dep of node.refs) {
-            visit(dep);
-        }
+		for (const dep of node.refs) {
+			visit(dep)
+		}
 
-        ordered.push(node);
-    }
+		ordered.push(node)
+	}
 
-    for (const id of nodes.keys()) {
-        visit(id);
-    }
+	for (const id of nodes.keys()) {
+		visit(id)
+	}
 
-    return ordered;
+	return ordered
 }
 
 /**
@@ -968,14 +934,14 @@ function topologicalSort(nodes) {
  * @returns {void}
  */
 function ensurePositionable(el) {
-    /** @type {CSSStyleDeclaration} */
-    const style = window.getComputedStyle(el);
+	/** @type {CSSStyleDeclaration} */
+	const style = window.getComputedStyle(el)
 
-    if (style.position === "static") {
-        el.style.position = "absolute";
-    }
+	if (style.position === 'static') {
+		el.style.position = 'absolute'
+	}
 
-    el.style.boxSizing = "border-box";
+	el.style.boxSizing = 'border-box'
 }
 
 /**
@@ -983,29 +949,29 @@ function ensurePositionable(el) {
  * @returns {void}
  */
 function applyBaseSizeCSS(node) {
-    const { el, width, height } = node;
+	const { el, width, height } = node
 
-    ensurePositionable(el);
+	ensurePositionable(el)
 
-    if (width) {
-        if (width.type === "fixed") {
-            el.style.width = px(width.value);
-        } else {
-            el.style.width = "auto";
-            el.style.minWidth = px(width.min);
-            el.style.maxWidth = px(width.max);
-        }
-    }
+	if (width) {
+		if (width.type === 'fixed') {
+			el.style.width = px(width.value)
+		} else {
+			el.style.width = 'auto'
+			el.style.minWidth = px(width.min)
+			el.style.maxWidth = px(width.max)
+		}
+	}
 
-    if (height) {
-        if (height.type === "fixed") {
-            el.style.height = px(height.value);
-        } else {
-            el.style.height = "auto";
-            el.style.minHeight = px(height.min);
-            el.style.maxHeight = px(height.max);
-        }
-    }
+	if (height) {
+		if (height.type === 'fixed') {
+			el.style.height = px(height.value)
+		} else {
+			el.style.height = 'auto'
+			el.style.minHeight = px(height.min)
+			el.style.maxHeight = px(height.max)
+		}
+	}
 }
 
 /**
@@ -1013,10 +979,10 @@ function applyBaseSizeCSS(node) {
  * @returns {void}
  */
 function clearInsetCSS(node) {
-    node.el.style.left = "";
-    node.el.style.right = "";
-    node.el.style.top = "";
-    node.el.style.bottom = "";
+	node.el.style.left = ''
+	node.el.style.right = ''
+	node.el.style.top = ''
+	node.el.style.bottom = ''
 }
 
 /**
@@ -1033,19 +999,19 @@ function clearInsetCSS(node) {
  * @returns {number}
  */
 function resolvePositionExpr(expr, nodes) {
-    if (expr.type === "body-ref") {
-        /** @type {ResolvedBox} */
-        const bodyBox = getBodyBox();
-        return bodyBox[expr.edge] + expr.offset;
-    }
+	if (expr.type === 'body-ref') {
+		/** @type {ResolvedBox} */
+		const bodyBox = getBodyBox()
+		return bodyBox[expr.edge] + expr.offset
+	}
 
-    /** @type {CanonicalNode | undefined} */
-    const targetNode = nodes.get(expr.targetId);
-    if (!targetNode || !targetNode.resolved) {
-        throw new Error(`[lx] Cannot resolve reference "#${expr.targetId}".`);
-    }
+	/** @type {CanonicalNode | undefined} */
+	const targetNode = nodes.get(expr.targetId)
+	if (!targetNode || !targetNode.resolved) {
+		throw new Error(`[lx] Cannot resolve reference "#${expr.targetId}".`)
+	}
 
-    return targetNode.resolved[expr.edge] + expr.offset;
+	return targetNode.resolved[expr.edge] + expr.offset
 }
 
 /**
@@ -1059,108 +1025,108 @@ function resolvePositionExpr(expr, nodes) {
  * @returns {ResolvedBox}
  */
 function resolveNode(node, nodes) {
-    /** @type {number | undefined} */
-    let left;
-    /** @type {number | undefined} */
-    let right;
-    /** @type {number | undefined} */
-    let top;
-    /** @type {number | undefined} */
-    let bottom;
-    /** @type {number | undefined} */
-    let width;
-    /** @type {number | undefined} */
-    let height;
+	/** @type {number | undefined} */
+	let left
+	/** @type {number | undefined} */
+	let right
+	/** @type {number | undefined} */
+	let top
+	/** @type {number | undefined} */
+	let bottom
+	/** @type {number | undefined} */
+	let width
+	/** @type {number | undefined} */
+	let height
 
-    if (node.left) {
-        left = resolvePositionExpr(node.left, nodes);
-    }
-    if (node.right) {
-        right = resolvePositionExpr(node.right, nodes);
-    }
-    if (node.top) {
-        top = resolvePositionExpr(node.top, nodes);
-    }
-    if (node.bottom) {
-        bottom = resolvePositionExpr(node.bottom, nodes);
-    }
+	if (node.left) {
+		left = resolvePositionExpr(node.left, nodes)
+	}
+	if (node.right) {
+		right = resolvePositionExpr(node.right, nodes)
+	}
+	if (node.top) {
+		top = resolvePositionExpr(node.top, nodes)
+	}
+	if (node.bottom) {
+		bottom = resolvePositionExpr(node.bottom, nodes)
+	}
 
-    // Width / Height pre-application:
-    // - fixed: known now
-    // - range: let CSS determine it first, then read actual box later
-    if (node.width?.type === "fixed") {
-        width = node.width.value;
-    }
-    if (node.height?.type === "fixed") {
-        height = node.height.value;
-    }
+	// Width / Height pre-application:
+	// - fixed: known now
+	// - range: let CSS determine it first, then read actual box later
+	if (node.width?.type === 'fixed') {
+		width = node.width.value
+	}
+	if (node.height?.type === 'fixed') {
+		height = node.height.value
+	}
 
-    /**
-     * First pass: if any range dimension exists, let CSS establish the rendered
-     * size, then read the actual size from the DOM.
-     */
-    if (node.width?.type === "range" || node.height?.type === "range") {
-        // Apply whatever inset is already computable so CSS can size content properly.
-        clearInsetCSS(node);
+	/**
+	 * First pass: if any range dimension exists, let CSS establish the rendered
+	 * size, then read the actual size from the DOM.
+	 */
+	if (node.width?.type === 'range' || node.height?.type === 'range') {
+		// Apply whatever inset is already computable so CSS can size content properly.
+		clearInsetCSS(node)
 
-        if (left !== undefined) node.el.style.left = px(left);
-        if (right !== undefined) node.el.style.right = px(right);
-        if (top !== undefined) node.el.style.top = px(top);
-        if (bottom !== undefined) node.el.style.bottom = px(bottom);
+		if (left !== undefined) node.el.style.left = px(left)
+		if (right !== undefined) node.el.style.right = px(right)
+		if (top !== undefined) node.el.style.top = px(top)
+		if (bottom !== undefined) node.el.style.bottom = px(bottom)
 
-        /** @type {ResolvedBox} */
-        const measured = readElementBox(node.el);
+		/** @type {ResolvedBox} */
+		const measured = readElementBox(node.el)
 
-        if (node.width?.type === "range") {
-            width = clamp(measured.width, node.width.min, node.width.max);
-            node.el.style.width = px(width);
-        }
+		if (node.width?.type === 'range') {
+			width = clamp(measured.width, node.width.min, node.width.max)
+			node.el.style.width = px(width)
+		}
 
-        if (node.height?.type === "range") {
-            height = clamp(measured.height, node.height.min, node.height.max);
-            node.el.style.height = px(height);
-        }
-    }
+		if (node.height?.type === 'range') {
+			height = clamp(measured.height, node.height.min, node.height.max)
+			node.el.style.height = px(height)
+		}
+	}
 
-    // Final solve per axis
-    if (left !== undefined && right !== undefined) {
-        width = right - left;
-    } else if (left !== undefined && width !== undefined) {
-        right = left + width;
-    } else if (right !== undefined && width !== undefined) {
-        left = right - width;
-    }
+	// Final solve per axis
+	if (left !== undefined && right !== undefined) {
+		width = right - left
+	} else if (left !== undefined && width !== undefined) {
+		right = left + width
+	} else if (right !== undefined && width !== undefined) {
+		left = right - width
+	}
 
-    if (top !== undefined && bottom !== undefined) {
-        height = bottom - top;
-    } else if (top !== undefined && height !== undefined) {
-        bottom = top + height;
-    } else if (bottom !== undefined && height !== undefined) {
-        top = bottom - height;
-    }
+	if (top !== undefined && bottom !== undefined) {
+		height = bottom - top
+	} else if (top !== undefined && height !== undefined) {
+		bottom = top + height
+	} else if (bottom !== undefined && height !== undefined) {
+		top = bottom - height
+	}
 
-    if (
-        left === undefined ||
-        right === undefined ||
-        top === undefined ||
-        bottom === undefined ||
-        width === undefined ||
-        height === undefined
-    ) {
-        throw new Error(`[lx] Failed to resolve ${describeEl(node.el)}.`);
-    }
+	if (
+		left === undefined ||
+		right === undefined ||
+		top === undefined ||
+		bottom === undefined ||
+		width === undefined ||
+		height === undefined
+	) {
+		throw new Error(`[lx] Failed to resolve ${describeEl(node.el)}.`)
+	}
 
-    /** @type {ResolvedBox} */
-    const box = {
-        left,
-        right,
-        top,
-        bottom,
-        width,
-        height,
-    };
+	/** @type {ResolvedBox} */
+	const box = {
+		left,
+		right,
+		top,
+		bottom,
+		width,
+		height,
+	}
 
-    return box;
+	return box
 }
 
 /**
@@ -1174,29 +1140,28 @@ function resolveNode(node, nodes) {
  * @returns {void}
  */
 function applyResolvedBox(node, box, nodes) {
-    ensurePositionable(node.el);
+	ensurePositionable(node.el)
 
-    /** @type {CanonicalNode | null} */
-    const container = findContainingBlock(node, nodes);
+	/** @type {CanonicalNode | null} */
+	const container = findContainingBlock(node, nodes)
 
-    /** @type {number} */
-    const baseLeft = container && container.resolved ? container.resolved.left : 0;
-    /** @type {number} */
-    const baseTop = container && container.resolved ? container.resolved.top : 0;
+	/** @type {number} */
+	const baseLeft = container && container.resolved ? container.resolved.left : 0
+	/** @type {number} */
+	const baseTop = container && container.resolved ? container.resolved.top : 0
 
-    /** @type {number} */
-    const cssLeft = box.left - baseLeft;
-    /** @type {number} */
-    const cssTop = box.top - baseTop;
+	/** @type {number} */
+	const cssLeft = box.left - baseLeft
+	/** @type {number} */
+	const cssTop = box.top - baseTop
 
-    node.el.style.left = px(cssLeft);
-    node.el.style.top = px(cssTop);
-    node.el.style.width = px(box.width);
-    node.el.style.height = px(box.height);
-    node.el.style.right = "";
-    node.el.style.bottom = "";
+	node.el.style.left = px(cssLeft)
+	node.el.style.top = px(cssTop)
+	node.el.style.width = px(box.width)
+	node.el.style.height = px(box.height)
+	node.el.style.right = ''
+	node.el.style.bottom = ''
 }
-
 
 /**
  * --------------------------------------------------------------------------
@@ -1210,67 +1175,67 @@ function applyResolvedBox(node, box, nodes) {
  * @returns {void}
  */
 function init(root = document.body, options = {}) {
-    /** @type {boolean} */
-    const debug = Boolean(options.debug);
+	/** @type {boolean} */
+	const debug = Boolean(options.debug)
 
-    /** @type {Map<string, CanonicalNode>} */
-    const nodes = collectNodes(root);
+	/** @type {Map<string, CanonicalNode>} */
+	const nodes = collectNodes(root)
 
-    validateNodes(nodes);
-    detectCycles(nodes);
+	validateNodes(nodes)
+	detectCycles(nodes)
 
-    /** @type {CanonicalNode[]} */
-    const ordered = topologicalSort(nodes);
+	/** @type {CanonicalNode[]} */
+	const ordered = topologicalSort(nodes)
 
-    if (debug) {
-        printCanonicalNodes(nodes);
-        printParsedNodes(nodes);
-        printDependencyOrder(ordered);
-    }
+	if (debug) {
+		printCanonicalNodes(nodes)
+		printParsedNodes(nodes)
+		printDependencyOrder(ordered)
+	}
 
-    // Apply base CSS first so DOM has usable dimensions before reading boxes.
-    for (const node of ordered) {
-        applyBaseSizeCSS(node);
-    }
+	// Apply base CSS first so DOM has usable dimensions before reading boxes.
+	for (const node of ordered) {
+		applyBaseSizeCSS(node)
+	}
 
-    // Resolve and apply in dependency order.
-    for (const node of ordered) {
-        /** @type {ResolvedBox} */
-        const box = resolveNode(node, nodes);
-        node.resolved = box;
-        applyResolvedBox(node, box, nodes);
-    }
+	// Resolve and apply in dependency order.
+	for (const node of ordered) {
+		/** @type {ResolvedBox} */
+		const box = resolveNode(node, nodes)
+		node.resolved = box
+		applyResolvedBox(node, box, nodes)
+	}
 
-    if (debug) {
-        printResolvedNodes(nodes);
-        printAppliedCss(nodes);
-    }
+	if (debug) {
+		printResolvedNodes(nodes)
+		printAppliedCss(nodes)
+	}
 }
 
 /**
  * @returns {void}
  */
 function boot() {
-    try {
-        /** @type {URLSearchParams} */
-        const params = new URLSearchParams(window.location.search);
-        /** @type {boolean} */
-        const debug = params.has("lx-debug");
+	try {
+		/** @type {URLSearchParams} */
+		const params = new URLSearchParams(window.location.search)
+		/** @type {boolean} */
+		const debug = params.has('lx-debug')
 
-        init(document.body, { debug });
-    } catch (error) {
-        console.error("%c[lx] Error", "color:#e74c3c;font-weight:bold;");
-        console.error(error);
-    }
+		init(document.body, { debug })
+	} catch (error) {
+		console.error('%c[lx] Error', 'color:#e74c3c;font-weight:bold;')
+		console.error(error)
+	}
 }
 
-if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
+if (document.readyState === 'loading') {
+	document.addEventListener('DOMContentLoaded', boot)
 } else {
-    boot();
+	boot()
 }
 
 /**
  * @type {{ init: (root?: ParentNode, options?: InitOptions) => void }}
  */
-window.lx = { init };
+window.lx = { init }
