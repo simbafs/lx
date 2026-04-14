@@ -94,6 +94,7 @@
  * @property {SizeExpr | null} height
  * @property {Set<string>} refs
  * @property {ResolvedBox | null} resolved
+ * @property {CanonicalAttrMap} canonicalAttrs
  */
 
 /**
@@ -118,6 +119,16 @@ const SIZE_ATTRS = /** @type {const} */ ([
 
 /** @type {readonly string[]} */
 const ALL_ATTRS = [...POSITION_ATTRS, ...SIZE_ATTRS];
+
+/** @type {Readonly<Record<string, string>>} */
+const ATTR_ALIASES = Object.freeze({
+    "lx-l": "lx-left",
+    "lx-r": "lx-right",
+    "lx-t": "lx-top",
+    "lx-b": "lx-bottom",
+    "lx-w": "lx-width",
+    "lx-h": "lx-height",
+});
 
 /**
  * Matches:
@@ -163,7 +174,146 @@ function describeEl(el) {
  */
 function hasLxAttrs(el) {
     if (!(el instanceof HTMLElement)) return false;
-    return ALL_ATTRS.some((attr) => el.hasAttribute(attr));
+    if (el.hasAttribute("lx")) return true;
+    if (ALL_ATTRS.some((attr) => el.hasAttribute(attr))) return true;
+    return Object.keys(ATTR_ALIASES).some((alias) => el.hasAttribute(alias));
+}
+
+/**
+ * --------------------------------------------------------------------------
+ * Sugar Transformation
+ * --------------------------------------------------------------------------
+ */
+
+/**
+ * @typedef {Object} CanonicalAttr
+ * @property {string} value
+ * @property {string} originalAttr
+ */
+
+/**
+ * @typedef {Object} CanonicalAttrMap
+ * @property {CanonicalAttr|undefined} left
+ * @property {CanonicalAttr|undefined} right
+ * @property {CanonicalAttr|undefined} top
+ * @property {CanonicalAttr|undefined} bottom
+ * @property {CanonicalAttr|undefined} width
+ * @property {CanonicalAttr|undefined} height
+ */
+
+/**
+ * Checks if a value is a numeric position (pure number).
+ * @param {string} value
+ * @returns {boolean}
+ */
+function isNumericPosition(value) {
+    return FIXED_SIZE_RE.test(value);
+}
+
+/**
+ * Converts numeric position to canonical form.
+ * @param {string} value
+ * @param {'left'|'right'|'top'|'bottom'} edge
+ * @param {string} containerId
+ * @returns {CanonicalAttr}
+ */
+function toCanonicalPosition(value, edge, containerId) {
+    const offset = parseNumber(value, `numeric position`);
+    const ref = containerId === "body" ? "body" : `#${containerId}`;
+    const sign = offset >= 0 ? "+" : "";
+    return {
+        value: `${ref}.${edge}${sign}${offset}`,
+        originalAttr: value,
+    };
+}
+
+/**
+ * Finds the nearest lx ancestor element.
+ * @param {HTMLElement} el
+ * @param {Set<string>} containerIds
+ * @returns {string}
+ */
+function findNearestLxAncestor(el, containerIds) {
+    let current = /** @type {HTMLElement|null} */ (el.parentElement);
+    while (current) {
+        if (current.id && containerIds.has(current.id)) {
+            return current.id;
+        }
+        current = /** @type {HTMLElement|null} */ (current.parentElement);
+    }
+    return "body";
+}
+
+/**
+ * Expands sugar syntax to canonical form.
+ * @param {HTMLElement} el
+ * @param {Set<string>} containerIds
+ * @returns {CanonicalAttrMap}
+ */
+function expandSugarToCanonical(el, containerIds) {
+    /** @type {CanonicalAttrMap} */
+    const result = {};
+
+    const aliasToCanonical = {
+        "lx-l": "left",
+        "lx-r": "right",
+        "lx-t": "top",
+        "lx-b": "bottom",
+        "lx-w": "width",
+        "lx-h": "height",
+    };
+
+    const positionEdges = ["left", "right", "top", "bottom"];
+    const sizeEdges = ["width", "height"];
+
+    for (const [alias, canonical] of Object.entries(aliasToCanonical)) {
+        if (el.hasAttribute(alias)) {
+            const value = /** @type {string} */ (el.getAttribute(alias));
+            if (positionEdges.includes(canonical)) {
+                if (isNumericPosition(value)) {
+                    const containerId = findNearestLxAncestor(el, containerIds);
+                    result[/** @type {keyof CanonicalAttrMap} */ (canonical)] =
+                        toCanonicalPosition(value, /** @type {'left'|'right'|'top'|'bottom'} */ (canonical), containerId);
+                } else {
+                    result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = {
+                        value,
+                        originalAttr: alias,
+                    };
+                }
+            } else {
+                result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = {
+                    value,
+                    originalAttr: alias,
+                };
+            }
+        }
+    }
+
+    for (const attr of ALL_ATTRS) {
+        if (el.hasAttribute(attr)) {
+            const edge = attr.replace("lx-", "");
+            const value = /** @type {string} */ (el.getAttribute(attr));
+            if (positionEdges.includes(edge)) {
+                if (isNumericPosition(value)) {
+                    const containerId = findNearestLxAncestor(el, containerIds);
+                    result[/** @type {keyof CanonicalAttrMap} */ (edge)] =
+                        toCanonicalPosition(value, /** @type {'left'|'right'|'top'|'bottom'} */ (edge), containerId);
+                } else {
+                    result[/** @type {keyof CanonicalAttrMap} */ (edge)] = {
+                        value,
+                        originalAttr: attr,
+                    };
+                }
+            } else {
+                result[/** @type {keyof CanonicalAttrMap} */ (edge)] = {
+                    value,
+                    originalAttr: attr,
+                };
+            }
+        }
+    }
+
+    return result;
 }
 
 /**
@@ -344,6 +494,46 @@ function printParsedNodes(nodes) {
     }
 
     console.log("%c[lx] Parsed canonical nodes", "color:#3498db;font-weight:bold;");
+    console.table(rows);
+}
+
+/**
+ * @param {CanonicalNode} node
+ * @returns {{
+ *   id: string,
+ *   left: string,
+ *   right: string,
+ *   top: string,
+ *   bottom: string,
+ *   width: string,
+ *   height: string
+ * }}
+ */
+function canonicalAttrsRow(node) {
+    return {
+        id: `#${node.id}`,
+        left: node.canonicalAttrs.left?.value ?? "",
+        right: node.canonicalAttrs.right?.value ?? "",
+        top: node.canonicalAttrs.top?.value ?? "",
+        bottom: node.canonicalAttrs.bottom?.value ?? "",
+        width: node.canonicalAttrs.width?.value ?? "",
+        height: node.canonicalAttrs.height?.value ?? "",
+    };
+}
+
+/**
+ * @param {Map<string, CanonicalNode>} nodes
+ * @returns {void}
+ */
+function printCanonicalNodes(nodes) {
+    /** @type {ReturnType<typeof canonicalAttrsRow>[]} */
+    const rows = [];
+
+    for (const [, node] of nodes) {
+        rows.push(canonicalAttrsRow(node));
+    }
+
+    console.log("%c[lx] Canonical called", "color:#e74c3c;font-weight:bold;");
     console.table(rows);
 }
 
@@ -551,13 +741,27 @@ function collectNodes(root) {
     /** @type {HTMLElement[]} */
     const elements = Array.from(root.querySelectorAll("*")).filter(hasLxAttrs);
 
+    /** @type {Set<string>} */
+    const containerIds = new Set();
+
+    for (const el of elements) {
+        if (el.hasAttribute("lx")) {
+            if (!el.id) {
+                throw new Error(
+                    `[lx] Container elements with lx attribute must have an id: ${describeEl(el)}`
+                );
+            }
+            containerIds.add(el.id);
+        }
+    }
+
     /** @type {Map<string, CanonicalNode>} */
     const nodes = new Map();
 
     for (const el of elements) {
         if (!el.id) {
             throw new Error(
-                `[lx] Canonical elements must have an id: ${describeEl(el)}`
+                `[lx] Elements with lx-* attributes must have an id: ${describeEl(el)}`
             );
         }
 
@@ -565,54 +769,33 @@ function collectNodes(root) {
             throw new Error(`[lx] Duplicate id "${el.id}".`);
         }
 
+        const canonicalAttrs = expandSugarToCanonical(el, containerIds);
+
         /** @type {CanonicalNode} */
         const node = {
             id: el.id,
             el,
-            left: el.hasAttribute("lx-left")
-                ? parsePositionExpr(
-            /** @type {string} */(el.getAttribute("lx-left")),
-                    "lx-left",
-                    el
-                )
+            left: canonicalAttrs.left
+                ? parsePositionExpr(canonicalAttrs.left.value, "lx-left", el)
                 : null,
-            right: el.hasAttribute("lx-right")
-                ? parsePositionExpr(
-            /** @type {string} */(el.getAttribute("lx-right")),
-                    "lx-right",
-                    el
-                )
+            right: canonicalAttrs.right
+                ? parsePositionExpr(canonicalAttrs.right.value, "lx-right", el)
                 : null,
-            top: el.hasAttribute("lx-top")
-                ? parsePositionExpr(
-            /** @type {string} */(el.getAttribute("lx-top")),
-                    "lx-top",
-                    el
-                )
+            top: canonicalAttrs.top
+                ? parsePositionExpr(canonicalAttrs.top.value, "lx-top", el)
                 : null,
-            bottom: el.hasAttribute("lx-bottom")
-                ? parsePositionExpr(
-            /** @type {string} */(el.getAttribute("lx-bottom")),
-                    "lx-bottom",
-                    el
-                )
+            bottom: canonicalAttrs.bottom
+                ? parsePositionExpr(canonicalAttrs.bottom.value, "lx-bottom", el)
                 : null,
-            width: el.hasAttribute("lx-width")
-                ? parseSizeExpr(
-            /** @type {string} */(el.getAttribute("lx-width")),
-                    "lx-width",
-                    el
-                )
+            width: canonicalAttrs.width
+                ? parseSizeExpr(canonicalAttrs.width.value, "lx-width", el)
                 : null,
-            height: el.hasAttribute("lx-height")
-                ? parseSizeExpr(
-            /** @type {string} */(el.getAttribute("lx-height")),
-                    "lx-height",
-                    el
-                )
+            height: canonicalAttrs.height
+                ? parseSizeExpr(canonicalAttrs.height.value, "lx-height", el)
                 : null,
             refs: new Set(),
             resolved: null,
+            canonicalAttrs,
         };
 
         nodes.set(node.id, node);
@@ -1040,6 +1223,7 @@ function init(root = document.body, options = {}) {
     const ordered = topologicalSort(nodes);
 
     if (debug) {
+        printCanonicalNodes(nodes);
         printParsedNodes(nodes);
         printDependencyOrder(ordered);
     }
