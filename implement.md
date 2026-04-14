@@ -49,10 +49,26 @@
 
 - body.left+10
 - #id.right-20
+- previous.bottom+10
+- next.top-20
 
 使用 regex：
 
-    /^(body|#id).(edge)(+offset)?/
+    /^(body|#([A-Za-z_][\w\-:.]*))\.(left|right|top|bottom)([+-]\d+(?:\.\d+)?)?$/
+
+Relative position regex：
+
+    /^(previous|next)\.(left|right|top|bottom)([+-]\d+(?:\.\d+)?)?$/
+
+### Sugar Expansion (`expandSugarToCanonical`)
+
+在 `setup` 階段，`expandSugarToCanonical` 會：
+
+1. 識別 `previous` / `next` 關鍵字
+2. 查詢 `containerOrderedIds` 取得當前元素在容器中的索引
+3. 計算目標索引（previous = index-1, next = index+1）
+4. 將關鍵字替換為具體的 `#id.edge` 格式
+5. 若邊界條件不符（第一個元素用 previous、最後一個用 next），拋出解析錯誤
 
 ---
 
@@ -85,7 +101,18 @@
 
 ---
 
-## 5. Dependency Graph
+## 5. Container Ordered IDs
+
+在 `collectNodes` 過程中，會建立 `containerOrderedIds: Map<string, string[]>` 結構：
+
+- Key：容器 ID（`body` 或元素 `#id`）
+- Value：該容器內所有 `lx` 元素的 ID 列表，按 DOM Tree Order 排列
+
+用於翻譯 `previous` / `next` 語法糖。
+
+---
+
+## 6. Dependency Graph
 
 - 每個 node 建立 refs
 - 使用 DFS 做 cycle detection
@@ -93,16 +120,16 @@
 
 ---
 
-## 6. Resolution
+## 7. Resolution
 
-### 6.1 Position
+### 7.1 Position
 
 - body → 直接數值
 - #id → 讀 target.resolved
 
 ---
 
-### 6.2 Range Size
+### 7.2 Range Size
 
 流程：
 
@@ -114,7 +141,7 @@
 
 ---
 
-### 6.3 Solve
+### 7.3 Solve
 
 每個軸：
 
@@ -124,7 +151,7 @@
 
 ---
 
-## 7. Coordinate System
+## 8. Coordinate System
 
 ### 內部
 
@@ -145,7 +172,7 @@
 
 ---
 
-## 8. Containing Block
+## 9. Containing Block
 
 目前策略：
 
@@ -154,7 +181,7 @@
 
 ---
 
-## 9. CSS Output
+## 10. CSS Output
 
 每個元素：
 
@@ -166,7 +193,7 @@
 
 ---
 
-## 10. Debug Mode
+## 11. Debug Mode
 
 啟用：
 
@@ -181,19 +208,18 @@
 
 ---
 
-## 11. Limitations
+## 12. Limitations
 
 目前未支援：
 
-- sugar（lx, shorthand）
-- reflow / resize
+- reflow / resize（由 lx-auto.js 處理）
 - partial update
 - scroll / transform 修正
 - 非 absolute layout
 
 ---
 
-## 12. Known Issues
+## 13. Known Issues
 
 - getBoundingClientRect() 依賴 layout timing
 - range size 可能需多次 reflow（目前只有一輪）
@@ -202,10 +228,9 @@
 
 ---
 
-## 13. Future Work
+## 14. Future Work
 
-- sugar compiler
-- ResizeObserver
+- ResizeObserver（已由 lx-auto.js 實現）
 - incremental layout
 - debug overlay UI
 - constraint solver（可選）

@@ -139,6 +139,22 @@ const ATTR_ALIASES = Object.freeze({
  */
 const POSITION_RE = /^(body|#([A-Za-z_][\w\-:.]*))\.(left|right|top|bottom)([+-]\d+(?:\.\d+)?)?$/
 
+/**
+ * Matches:
+ * - previous.left+50
+ * - next.top-10
+ * - previous.bottom
+ * - next.right+20
+ *
+ * Groups:
+ * 1 => previous or next
+ * 2 => edge
+ * 3 => offset
+ *
+ * @type {RegExp}
+ */
+const RELATIVE_POSITION_RE = /^(previous|next)\.(left|right|top|bottom)([+-]\d+(?:\.\d+)?)?$/
+
 /** @type {RegExp} */
 const FIXED_SIZE_RE = /^-?\d+(?:\.\d+)?$/
 
@@ -240,9 +256,11 @@ function findNearestLxAncestor(el, containerIds) {
  * Expands sugar syntax to canonical form.
  * @param {HTMLElement} el
  * @param {Set<string>} containerIds
+ * @param {Map<string, string[]>} containerOrderedIds
+ * @param {Map<string, CanonicalNode>} nodes
  * @returns {CanonicalAttrMap}
  */
-function expandSugarToCanonical(el, containerIds) {
+function expandSugarToCanonical(el, containerIds, containerOrderedIds, nodes) {
 	/** @type {CanonicalAttrMap} */
 	const result = {}
 
@@ -258,11 +276,53 @@ function expandSugarToCanonical(el, containerIds) {
 	const positionEdges = ['left', 'right', 'top', 'bottom']
 	const sizeEdges = ['width', 'height']
 
+	/** @param {string} value @param {string} edge */
+	const expandRelativePosition = (value, edge) => {
+		const match = value.match(RELATIVE_POSITION_RE)
+		if (!match) return null
+
+		const keyword = match[1]
+		const targetEdge = match[2]
+		const offset = match[3] ? Number(match[3]) : 0
+
+		const containerId = findNearestLxAncestor(el, containerIds)
+		const orderedIds = containerOrderedIds.get(containerId) || []
+
+		if (orderedIds.length === 0) {
+			throw new Error(`[lx] ${describeEl(el)} cannot use "${keyword}" - container has no elements.`)
+		}
+
+		const currentIndex = orderedIds.indexOf(el.id)
+		let targetIndex
+
+		if (keyword === 'previous') {
+			targetIndex = currentIndex - 1
+			if (targetIndex < 0) {
+				throw new Error(`[lx] ${describeEl(el)} is the first element in container "${containerId}" and cannot use "previous".`)
+			}
+		} else {
+			targetIndex = currentIndex + 1
+			if (targetIndex >= orderedIds.length) {
+				throw new Error(`[lx] ${describeEl(el)} is the last element in container "${containerId}" and cannot use "next".`)
+			}
+		}
+
+		const targetId = orderedIds[targetIndex]
+		const sign = offset >= 0 ? '+' : ''
+		return `#${targetId}.${targetEdge}${sign}${offset}`
+	}
+
 	for (const [alias, canonical] of Object.entries(aliasToCanonical)) {
 		if (el.hasAttribute(alias)) {
 			const value = /** @type {string} */ (el.getAttribute(alias))
 			if (positionEdges.includes(canonical)) {
-				if (isNumericPosition(value)) {
+				const expanded = expandRelativePosition(value, canonical)
+				if (expanded) {
+					result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = {
+						value: expanded,
+						originalAttr: alias,
+					}
+				} else if (isNumericPosition(value)) {
 					const containerId = findNearestLxAncestor(el, containerIds)
 					result[/** @type {keyof CanonicalAttrMap} */ (canonical)] = toCanonicalPosition(
 						value,
@@ -289,7 +349,13 @@ function expandSugarToCanonical(el, containerIds) {
 			const edge = attr.replace('lx-', '')
 			const value = /** @type {string} */ (el.getAttribute(attr))
 			if (positionEdges.includes(edge)) {
-				if (isNumericPosition(value)) {
+				const expanded = expandRelativePosition(value, edge)
+				if (expanded) {
+					result[/** @type {keyof CanonicalAttrMap} */ (edge)] = {
+						value: expanded,
+						originalAttr: attr,
+					}
+				} else if (isNumericPosition(value)) {
 					const containerId = findNearestLxAncestor(el, containerIds)
 					result[/** @type {keyof CanonicalAttrMap} */ (edge)] = toCanonicalPosition(
 						value,
@@ -729,7 +795,7 @@ function parseSizeExpr(raw, attrName, el) {
 
 /**
  * @param {ParentNode} root
- * @returns {Map<string, CanonicalNode>}
+ * @returns {{nodes: Map<string, CanonicalNode>, containerOrderedIds: Map<string, string[]>}}
  */
 function collectNodes(root) {
 	/** @type {HTMLElement[]} */
@@ -750,6 +816,9 @@ function collectNodes(root) {
 	/** @type {Map<string, CanonicalNode>} */
 	const nodes = new Map()
 
+	/** @type {Map<string, string[]>} */
+	const containerOrderedIds = new Map()
+
 	for (const el of elements) {
 		if (!el.id) {
 			throw new Error(`[lx] Elements with lx-* attributes must have an id: ${describeEl(el)}`)
@@ -759,27 +828,47 @@ function collectNodes(root) {
 			throw new Error(`[lx] Duplicate id "${el.id}".`)
 		}
 
-		const canonicalAttrs = expandSugarToCanonical(el, containerIds)
+		const containerId = findNearestLxAncestor(el, containerIds)
+
+		if (!containerOrderedIds.has(containerId)) {
+			containerOrderedIds.set(containerId, [])
+		}
+		containerOrderedIds.get(containerId).push(el.id)
 
 		/** @type {CanonicalNode} */
 		const node = {
 			id: el.id,
 			el,
-			left: canonicalAttrs.left ? parsePositionExpr(canonicalAttrs.left.value, 'lx-left', el) : null,
-			right: canonicalAttrs.right ? parsePositionExpr(canonicalAttrs.right.value, 'lx-right', el) : null,
-			top: canonicalAttrs.top ? parsePositionExpr(canonicalAttrs.top.value, 'lx-top', el) : null,
-			bottom: canonicalAttrs.bottom ? parsePositionExpr(canonicalAttrs.bottom.value, 'lx-bottom', el) : null,
-			width: canonicalAttrs.width ? parseSizeExpr(canonicalAttrs.width.value, 'lx-width', el) : null,
-			height: canonicalAttrs.height ? parseSizeExpr(canonicalAttrs.height.value, 'lx-height', el) : null,
+			left: null,
+			right: null,
+			top: null,
+			bottom: null,
+			width: null,
+			height: null,
 			refs: new Set(),
 			resolved: null,
-			canonicalAttrs,
+			canonicalAttrs: /** @type {CanonicalAttrMap} */ ({}),
 		}
 
 		nodes.set(node.id, node)
 	}
 
-	return nodes
+	for (const el of elements) {
+		const node = nodes.get(el.id)
+		if (!node) continue
+
+		const canonicalAttrs = expandSugarToCanonical(el, containerIds, containerOrderedIds, nodes)
+
+		node.canonicalAttrs = canonicalAttrs
+		node.left = canonicalAttrs.left ? parsePositionExpr(canonicalAttrs.left.value, 'lx-left', el) : null
+		node.right = canonicalAttrs.right ? parsePositionExpr(canonicalAttrs.right.value, 'lx-right', el) : null
+		node.top = canonicalAttrs.top ? parsePositionExpr(canonicalAttrs.top.value, 'lx-top', el) : null
+		node.bottom = canonicalAttrs.bottom ? parsePositionExpr(canonicalAttrs.bottom.value, 'lx-bottom', el) : null
+		node.width = canonicalAttrs.width ? parseSizeExpr(canonicalAttrs.width.value, 'lx-width', el) : null
+		node.height = canonicalAttrs.height ? parseSizeExpr(canonicalAttrs.height.value, 'lx-height', el) : null
+	}
+
+	return { nodes, containerOrderedIds }
 }
 
 /**
@@ -1178,6 +1267,9 @@ let cachedOrderedNodes = null
 /** @type {boolean} */
 let cachedDebug = false
 
+/** @type {Map<string, string[]> | null} */
+let cachedContainerOrderedIds = null
+
 /**
  * --------------------------------------------------------------------------
  * Main
@@ -1196,7 +1288,9 @@ let cachedDebug = false
 function setup(root = document.body, options = {}) {
 	cachedDebug = Boolean(options.debug)
 
-	cachedNodesMap = collectNodes(root)
+	const { nodes, containerOrderedIds } = collectNodes(root)
+	cachedNodesMap = nodes
+	cachedContainerOrderedIds = containerOrderedIds
 
 	validateNodes(cachedNodesMap)
 	detectCycles(cachedNodesMap)

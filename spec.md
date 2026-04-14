@@ -218,6 +218,49 @@ lx-h lx-height
 
 ---
 
+## 5.6 Relative Selectors (previous / next)
+
+### 語法
+
+    previous.<edge>[+|-offset]
+    next.<edge>[+|-offset]
+
+### 語意
+
+- `previous`：參考同一容器內邏輯順序上的前一個 `lx` 元素
+- `next`：參考同一容器內邏輯順序上的下一個 `lx` 元素
+- 順序按照 DOM Tree Order（DFS 前序遍歷時首次遇到的順序）
+- 為語法糖，會在 setup 階段翻譯為具體的 `#id.edge` 格式
+
+### 邊界條件
+
+- 第一個元素使用 `previous`：拋出解析錯誤
+- 最後一個元素使用 `next`：拋出解析錯誤
+
+---
+
+### 範例
+
+```html
+<div id="container" lx>
+  <div id="first" lx-l="0" lx-r="0" lx-t="0" lx-h="50">first</div>
+  <div id="second" lx-l="0" lx-r="0" lx-t="previous.bottom+10" lx-h="80">second</div>
+  <div id="third" lx-l="0" lx-r="0" lx-t="previous.bottom+10" lx-h="60">third</div>
+</div>
+```
+
+翻譯後：
+
+```html
+<div id="container" lx>
+  <div id="first" lx-l="0" lx-r="0" lx-t="0" lx-h="50">first</div>
+  <div id="second" lx-l="0" lx-r="0" lx-t="#first.bottom+10" lx-h="80">second</div>
+  <div id="third" lx-l="0" lx-r="0" lx-t="#second.bottom+10" lx-h="60">third</div>
+</div>
+```
+
+---
+
 # 6. Canonical Transformation
 
 所有 sugar 必須可轉換為：

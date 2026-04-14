@@ -42,6 +42,7 @@ Supports `lx-left` (`lx-l`), `lx-right` (`lx-r`), `lx-top` (`lx-t`), and `lx-bot
 
 - **Reference Mode**: `#id.edge[+/-offset]` or `body.edge[+/-offset]`.
 - **Numeric Shorthand**: If only a number is provided (e.g., `lx-l="10"`), it defaults to a 10px offset from the nearest `lx` container's edge.
+- **Relative Selectors**: Use `previous.edge[+/-offset]` or `next.edge[+/-offset]` to reference the logical previous or next sibling element within the same container. These are syntactic sugar that gets translated to concrete `#id` references during setup.
 
 ### 2. Size Attributes
 
