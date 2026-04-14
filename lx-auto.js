@@ -133,7 +133,10 @@ function handleMutations(mutations) {
 
 		if (mutation.type === 'attributes') {
 			const attr = mutation.attributeName
-			if (attr === 'style') continue
+			if (attr === 'style' || attr === 'class') continue
+			if (attr.startsWith('data-lx-')) {
+				needsSetup = true
+			}
 			if (attr.startsWith('lx-') || attr === 'lx' || attr === 'id') {
 				needsSetup = true
 			}
@@ -174,22 +177,6 @@ function initAuto() {
 		subtree: true,
 		attributes: true,
 		characterData: true,
-		attributeFilter: [
-			'id',
-			'lx',
-			'lx-l',
-			'lx-r',
-			'lx-t',
-			'lx-b',
-			'lx-w',
-			'lx-h',
-			'lx-left',
-			'lx-right',
-			'lx-top',
-			'lx-bottom',
-			'lx-width',
-			'lx-height',
-		],
 	})
 }
 
