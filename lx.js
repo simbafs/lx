@@ -1,680 +1,428 @@
 /**
- * @file lx - HTML attribute DSL for absolute positioning
- * @version 1.0.0
+ * @file lx.js
+ * @description Canonical-only lx runtime. CSS-first, JS-assisted.
+ * It parses canonical lx attributes, validates them, resolves cross-element
+ * references into px values, and applies ordinary CSS styles to the DOM.
  */
 
 /**
- * @typedef {Object} RefExpr
- * @property {'ref'} type
- * @property {string} targetId
- * @property {'left'|'right'|'top'|'bottom'} edge
+ * --------------------------------------------------------------------------
+ * Type Definitions
+ * --------------------------------------------------------------------------
+ */
+
+/**
+ * @typedef {Object} InitOptions
+ * @property {boolean} [debug]
+ */
+
+/**
+ * @typedef {'left'|'right'|'top'|'bottom'} Edge
+ */
+
+/**
+ * @typedef {'lx-left'|'lx-right'|'lx-top'|'lx-bottom'} PositionAttrName
+ */
+
+/**
+ * @typedef {'lx-width'|'lx-height'} SizeAttrName
+ */
+
+/**
+ * @typedef {'body'|'id'} RefTargetType
+ */
+
+/**
+ * @typedef {Object} BodyPositionExpr
+ * @property {'body-ref'} type
+ * @property {Edge} edge
  * @property {number} offset
+ * @property {string} raw
  */
 
 /**
- * @typedef {Object} NumericValue
- * @property {'number'} type
+ * @typedef {Object} ElementPositionExpr
+ * @property {'element-ref'} type
+ * @property {string} targetId
+ * @property {Edge} edge
+ * @property {number} offset
+ * @property {string} raw
+ */
+
+/**
+ * @typedef {BodyPositionExpr | ElementPositionExpr} PositionExpr
+ */
+
+/**
+ * @typedef {Object} FixedSizeExpr
+ * @property {'fixed'} type
  * @property {number} value
+ * @property {string} raw
  */
 
 /**
- * @typedef {RefExpr | NumericValue} Value
+ * @typedef {Object} RangeSizeExpr
+ * @property {'range'} type
+ * @property {number} min
+ * @property {number} max
+ * @property {string} raw
  */
 
 /**
- * @typedef {Object} Constraint
- * @property {'left'|'right'|'top'|'bottom'} edge
- * @property {Value} value
+ * @typedef {FixedSizeExpr | RangeSizeExpr} SizeExpr
  */
 
 /**
- * @typedef {Object} ElementData
+ * @typedef {Object} ResolvedBox
+ * @property {number} left
+ * @property {number} right
+ * @property {number} top
+ * @property {number} bottom
+ * @property {number} width
+ * @property {number} height
+ */
+
+/**
+ * @typedef {Object} CanonicalNode
  * @property {string} id
  * @property {HTMLElement} el
- * @property {boolean} isContainer
- * @property {string|null} reference
- * @property {{left?:Constraint,right?:Constraint,top?:Constraint,bottom?:Constraint}} constraints
- * @property {{min:number,max:number}|number|undefined} width
- * @property {{min:number,max:number}|number|undefined} height
- * @property {{left?:number,right?:number,top?:number,bottom?:number,width?:number,height?:number}} resolved
+ * @property {PositionExpr | null} left
+ * @property {PositionExpr | null} right
+ * @property {PositionExpr | null} top
+ * @property {PositionExpr | null} bottom
+ * @property {SizeExpr | null} width
+ * @property {SizeExpr | null} height
+ * @property {Set<string>} refs
+ * @property {ResolvedBox | null} resolved
  */
 
 /**
- * @typedef {Object} LxError
- * @property {'MISSING_ID'|'CIRCULAR_DEPENDENCY'|'CONSTRAINT_TOO_MANY'|'CONSTRAINT_TOO_FEW'|'RANGE_INVALID'|'BOTH_RANGE'|'MIN_GREATER_MAX'|'SYNTAX_ERROR'} type
- * @property {string} [elementId]
- * @property {string} message
+ * --------------------------------------------------------------------------
+ * Constants
+ * --------------------------------------------------------------------------
+ */
+
+/** @type {readonly PositionAttrName[]} */
+const POSITION_ATTRS = /** @type {const} */ ([
+    "lx-left",
+    "lx-right",
+    "lx-top",
+    "lx-bottom",
+]);
+
+/** @type {readonly SizeAttrName[]} */
+const SIZE_ATTRS = /** @type {const} */ ([
+    "lx-width",
+    "lx-height",
+]);
+
+/** @type {readonly string[]} */
+const ALL_ATTRS = [...POSITION_ATTRS, ...SIZE_ATTRS];
+
+/**
+ * Matches:
+ * - body.left+50
+ * - body.top-10
+ * - #main.right+20
+ * - #info.bottom
+ *
+ * Groups:
+ * 1 => body or #id
+ * 2 => id without #
+ * 3 => edge
+ * 4 => offset
+ *
+ * @type {RegExp}
+ */
+const POSITION_RE = /^(body|#([A-Za-z_][\w\-:.]*))\.(left|right|top|bottom)([+-]\d+(?:\.\d+)?)?$/;
+
+/** @type {RegExp} */
+const FIXED_SIZE_RE = /^-?\d+(?:\.\d+)?$/;
+
+/** @type {RegExp} */
+const RANGE_SIZE_RE = /^(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/;
+
+/**
+ * --------------------------------------------------------------------------
+ * Utility Functions
+ * --------------------------------------------------------------------------
  */
 
 /**
- * @typedef {Object} LxResult
- * @property {LxError[]} errors
+ * @param {HTMLElement} el
+ * @returns {string}
  */
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const REF_EXPR_REGEX = /^#([^.]+)\.(left|right|top|bottom)([+-]\d+)?$/;
-
-// ============================================================================
-// Parser
-// ============================================================================
-
-/**
- * @param {string} val
- * @returns {Value}
- */
-function parseValue(val) {
-    const trimmed = val.trim();
-
-    const match = trimmed.match(REF_EXPR_REGEX);
-    if (match) {
-        const [, targetId, edge, offsetStr] = match;
-        const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
-        return {
-            type: 'ref',
-            targetId,
-            edge,
-            offset,
-        };
-    }
-
-    const num = parseFloat(trimmed);
-    if (!isNaN(num) && trimmed === String(num)) {
-        return { type: 'number', value: num };
-    }
-
-    throw new Error(`Invalid syntax: "${val}"`);
+function describeEl(el) {
+    const id = el.id ? ` id="${el.id}"` : "";
+    return `<${el.tagName.toLowerCase()}${id}>`;
 }
 
 /**
- * @param {Value} value
- * @param {function(string, string):number} getEdge
+ * @param {Element} el
+ * @returns {el is HTMLElement}
+ */
+function hasLxAttrs(el) {
+    if (!(el instanceof HTMLElement)) return false;
+    return ALL_ATTRS.some((attr) => el.hasAttribute(attr));
+}
+
+/**
+ * @param {number} value
+ * @returns {string}
+ */
+function px(value) {
+    return `${value}px`;
+}
+
+/**
+ * @param {string} raw
+ * @param {string} context
  * @returns {number}
  */
-function resolveValue(value, getEdge) {
-    if (value.type === 'number') {
-        return value.value;
+function parseNumber(raw, context) {
+    const n = Number(raw);
+    if (!Number.isFinite(n)) {
+        throw new Error(`[lx] Invalid number "${raw}" in ${context}`);
     }
-    return getEdge(value.targetId, value.edge) + value.offset;
-}
-
-// ============================================================================
-// Dependency Graph
-// ============================================================================
-
-class DependencyGraph {
-    constructor() {
-        /** @type {Map<string, Set<string>>} */
-        this.edges = new Map();
-        /** @type {Set<string>} */
-        this.nodes = new Set();
-    }
-
-    /**
-     * @param {string} id
-     */
-    addNode(id) {
-        this.nodes.add(id);
-        if (!this.edges.has(id)) {
-            this.edges.set(id, new Set());
-        }
-    }
-
-    /**
-     * @param {string} from
-     * @param {string} to
-     */
-    addEdge(from, to) {
-        this.addNode(from);
-        this.addNode(to);
-        this.edges.get(from).add(to);
-    }
-
-    /**
-     * @param {string} id
-     * @returns {string[]}
-     */
-    getDependencies(id) {
-        return Array.from(this.edges.get(id) || []);
-    }
-
-    /**
-     * @returns {{from:string, to:string}|null}
-     */
-    detectCycles() {
-        const visited = new Set();
-        const recStack = new Set();
-        const path = [];
-
-        /** @param {string} node */
-        const dfs = (node) => {
-            visited.add(node);
-            recStack.add(node);
-            path.push(node);
-
-            const deps = this.getDependencies(node);
-            for (const dep of deps) {
-                if (!visited.has(dep)) {
-                    if (dfs(dep)) return true;
-                } else if (recStack.has(dep)) {
-                    path.push(dep);
-                    return true;
-                }
-            }
-
-            path.pop();
-            recStack.delete(node);
-            return false;
-        };
-
-        for (const node of this.nodes) {
-            if (!visited.has(node)) {
-                if (dfs(node)) {
-                    return {
-                        from: path[path.length - 1],
-                        to: path[path.length - 2],
-                    };
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * @returns {string[]}
-     */
-    topologicalSort() {
-        const visited = new Set();
-        const result = [];
-
-        /** @param {string} node */
-        const dfs = (node) => {
-            if (visited.has(node)) return;
-            visited.add(node);
-            const deps = this.getDependencies(node);
-            for (const dep of deps) {
-                dfs(dep);
-            }
-            result.push(node);
-        };
-
-        for (const node of this.nodes) {
-            dfs(node);
-        }
-
-        return result;
-    }
-}
-
-// ============================================================================
-// Validation
-// ============================================================================
-
-/**
- * @param {ElementData} element
- * @param {Map<string, ElementData>} allElements
- * @returns {LxError|null}
- */
-function validateConstraints(element, allElements) {
-    const { constraints, width, height, id } = element;
-    const horizCount = (constraints.left ? 1 : 0) + (constraints.right ? 1 : 0);
-    const vertCount = (constraints.top ? 1 : 0) + (constraints.bottom ? 1 : 0);
-    const hasWidth = width !== undefined;
-    const hasHeight = height !== undefined;
-
-    if (horizCount + (hasWidth ? 1 : 0) > 2) {
-        return {
-            type: 'CONSTRAINT_TOO_MANY',
-            elementId: id,
-            message: `Horizontal constraints exceed 2 (left, right, width)`,
-        };
-    }
-
-    if (vertCount + (hasHeight ? 1 : 0) > 2) {
-        return {
-            type: 'CONSTRAINT_TOO_MANY',
-            elementId: id,
-            message: `Vertical constraints exceed 2 (top, bottom, height)`,
-        };
-    }
-
-    if (horizCount + (hasWidth ? 1 : 0) < 2) {
-        return {
-            type: 'CONSTRAINT_TOO_FEW',
-            elementId: id,
-            message: `Horizontal constraints incomplete (need 2 of left, right, width)`,
-        };
-    }
-
-    if (vertCount + (hasHeight ? 1 : 0) < 2) {
-        return {
-            type: 'CONSTRAINT_TOO_FEW',
-            elementId: id,
-            message: `Vertical constraints incomplete (need 2 of top, bottom, height)`,
-        };
-    }
-
-    if (typeof width === 'object' && typeof height === 'object') {
-        return {
-            type: 'BOTH_RANGE',
-            elementId: id,
-            message: `Cannot use range for both width and height`,
-        };
-    }
-
-    if (typeof width === 'object' && width.min > width.max) {
-        return {
-            type: 'MIN_GREATER_MAX',
-            elementId: id,
-            message: `Width min (${width.min}) > max (${width.max})`,
-        };
-    }
-
-    if (typeof height === 'object' && height.min > height.max) {
-        return {
-            type: 'MIN_GREATER_MAX',
-            elementId: id,
-            message: `Height min (${height.min}) > max (${height.max})`,
-        };
-    }
-
-    return null;
+    return n;
 }
 
 /**
- * @param {Map<string, ElementData>} elements
- * @returns {{graph:DependencyGraph, errors:LxError[]}}
+ * @param {DOMRect | {left:number;right:number;top:number;bottom:number;width:number;height:number}} rect
+ * @returns {ResolvedBox}
  */
-function buildDependencyGraph(elements) {
-    const graph = new DependencyGraph();
-    /** @type {LxError[]} */
-    const errors = [];
-
-    for (const [id, element] of elements) {
-        graph.addNode(id);
-
-        /**
-         * @param {Value} value
-         */
-        const checkRef = (value) => {
-            if (value.type === 'ref' && value.targetId) {
-                if (!elements.has(value.targetId)) {
-                    errors.push({
-                        type: 'MISSING_ID',
-                        elementId: id,
-                        message: `Referenced element "${value.targetId}" does not exist`,
-                    });
-                } else {
-                    graph.addEdge(id, value.targetId);
-                }
-            }
-        };
-
-        const { constraints, width, height } = element;
-        if (constraints.left) checkRef(constraints.left.value);
-        if (constraints.right) checkRef(constraints.right.value);
-        if (constraints.top) checkRef(constraints.top.value);
-        if (constraints.bottom) checkRef(constraints.bottom.value);
-    }
-
-    const cycle = graph.detectCycles();
-    if (cycle) {
-        errors.push({
-            type: 'CIRCULAR_DEPENDENCY',
-            elementId: cycle.from,
-            message: `Circular dependency detected: ${cycle.from} -> ${cycle.to}`,
-        });
-    }
-
-    return { graph, errors };
-}
-
-// ============================================================================
-// Solver
-// ============================================================================
-
-/**
- * @param {Map<string, ElementData>} elements
- * @param {DependencyGraph} graph
- */
-/**
- * @param {Map<string, ElementData>} elements
- * @param {DependencyGraph} graph
- */
-function solveConstraints(elements, graph) {
-    const sortedIds = graph.topologicalSort();
-
-    /**
-     * @param {string} id
-     * @param {string} edge
-     * @returns {number}
-     */
-    const getEdge = (id, edge) => {
-        const el = elements.get(id);
-        if (!el) throw new Error(`Element ${id} not found`);
-        return el.resolved[edge] ?? 0;
+function cloneRect(rect) {
+    return {
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
     };
-
-    for (const id of sortedIds) {
-        const element = elements.get(id);
-        if (!element) continue;
-
-        const { constraints, width, height } = element;
-        const resolved = element.resolved;
-
-        if (constraints.left) {
-            resolved.left = resolveValue(constraints.left.value, getEdge);
-        }
-        if (constraints.right) {
-            resolved.right = resolveValue(constraints.right.value, getEdge);
-        }
-        if (constraints.top) {
-            resolved.top = resolveValue(constraints.top.value, getEdge);
-        }
-        if (constraints.bottom) {
-            resolved.bottom = resolveValue(constraints.bottom.value, getEdge);
-        }
-
-        // 尺寸：fixed 直接寫；range 只在第一次尚未量測時先用 max 當暫時值
-        if (typeof width === 'number') {
-            resolved.width = width;
-        } else if (typeof width === 'object' && width) {
-            if (resolved.width === undefined) {
-                resolved.width = width.max;
-            }
-        }
-
-        if (typeof height === 'number') {
-            resolved.height = height;
-        } else if (typeof height === 'object' && height) {
-            if (resolved.height === undefined) {
-                resolved.height = height.max;
-            }
-        }
-
-        const hasLeft = resolved.left !== undefined;
-        const hasRight = resolved.right !== undefined;
-        const hasTop = resolved.top !== undefined;
-        const hasBottom = resolved.bottom !== undefined;
-        const hasWidth = resolved.width !== undefined;
-        const hasHeight = resolved.height !== undefined;
-
-        // Horizontal
-        if (hasLeft && hasRight) {
-            resolved.width = resolved.right - resolved.left;
-        } else if (hasLeft && hasWidth) {
-            resolved.right = resolved.left + resolved.width;
-        } else if (hasRight && hasWidth) {
-            resolved.left = resolved.right - resolved.width;
-        }
-
-        // Vertical
-        if (hasTop && hasBottom) {
-            resolved.height = resolved.bottom - resolved.top;
-        } else if (hasTop && hasHeight) {
-            resolved.bottom = resolved.top + resolved.height;
-        } else if (hasBottom && hasHeight) {
-            resolved.top = resolved.bottom - resolved.height;
-        }
-    }
 }
 
 /**
- * @param {ElementData} element
- * @param {HTMLElement} el
- * @returns {boolean}
+ * @returns {ResolvedBox}
  */
-function applyContentSize(element, el) {
-    const { width, height, resolved } = element;
-    let changed = false;
-
-    if (typeof width === 'object' && width) {
-        const contentWidth = el.scrollWidth;
-        const nextWidth = Math.min(Math.max(contentWidth, width.min), width.max);
-        if (resolved.width !== nextWidth) {
-            resolved.width = nextWidth;
-            changed = true;
-        }
-    }
-
-    if (typeof height === 'object' && height) {
-        const contentHeight = el.scrollHeight;
-        const nextHeight = Math.min(Math.max(contentHeight, height.min), height.max);
-        if (resolved.height !== nextHeight) {
-            resolved.height = nextHeight;
-            changed = true;
-        }
-    }
-
-    if (resolved.left !== undefined && resolved.width !== undefined) {
-        resolved.right = resolved.left + resolved.width;
-    }
-    if (resolved.top !== undefined && resolved.height !== undefined) {
-        resolved.bottom = resolved.top + resolved.height;
-    }
-
-    return changed;
-}
-
-/**
- * @param {Map<string, ElementData>} elements
- */
-function applyIntermediateCSS(elements) {
-    for (const [, element] of elements) {
-        const css = generateCSS(element, elements);
-        const hasPositioning = element.constraints.left || element.constraints.top ||
-                              element.constraints.right || element.constraints.bottom;
-        applyCSS(element.el, css, element.isContainer, hasPositioning);
-    }
-}
-
-/**
- * @param {Map<string, ElementData>} elements
- * @param {DependencyGraph} graph
- */
-function resolveLayout(elements, graph) {
-    const MAX_PASSES = 8;
-
-    // 先給一輪初始解
-    solveConstraints(elements, graph);
-
-    for (let pass = 0; pass < MAX_PASSES; pass++) {
-        // 先把目前解套到 DOM，讓 scrollWidth / scrollHeight 有正確寬度條件
-        applyIntermediateCSS(elements);
-
-        let changed = false;
-
-        for (const [, element] of elements) {
-            if (element.width || element.height) {
-                if (applyContentSize(element, element.el)) {
-                    changed = true;
-                }
-            }
-        }
-
-        // 用新的內容尺寸重解相依元素
-        solveConstraints(elements, graph);
-
-        if (!changed) {
-            break;
-        }
-    }
-}
-
-
-// ============================================================================
-// CSS Generator
-// ============================================================================
-
-/**
- * @param {ElementData} element
- * @param {Map<string, ElementData>} elements
- * @returns {{left?:number,top?:number,width?:number,height?:number}}
- */
-function generateCSS(element, elements) {
-    const { resolved } = element;
-    const { width, height } = resolved;
-    let { left, top } = resolved;
-
-    if (element.reference) {
-        const container = elements.get(element.reference);
-        if (container && container.resolved) {
-            if (left !== undefined && container.resolved.left !== undefined) {
-                left = left - container.resolved.left;
-            }
-            if (top !== undefined && container.resolved.top !== undefined) {
-                top = top - container.resolved.top;
-            }
-        }
-    }
-
-    return { left, top, width, height };
-}
-
-/**
- * @param {HTMLElement} el
- * @param {{left?:number,top?:number,width?:number,height?:number}} css
- * @param {boolean} [isContainer]
- * @param {boolean} [hasPositioning]
- */
-function applyCSS(el, css, isContainer, hasPositioning) {
-    // If container has explicit positioning (lx-left/top/right/bottom),
-    // use absolute so the left/top values are respected.
-    // Otherwise use relative for normal flow positioning.
-    // This solves the problem where container's calculated left/top
-    // were correct but ignored because relative doesn't use them.
-    el.style.position = (isContainer && !hasPositioning) ? 'relative' : 'absolute';
-
-    if (css.left !== undefined) {
-        el.style.left = `${css.left}px`;
-    }
-    if (css.top !== undefined) {
-        el.style.top = `${css.top}px`;
-    }
-    if (css.width !== undefined) {
-        el.style.width = `${css.width}px`;
-    }
-    if (css.height !== undefined) {
-        el.style.height = `${css.height}px`;
-    }
-}
-
-
-// ============================================================================
-// Element Parser
-// ============================================================================
-
-const EDGE_PATTERN = /^lx-(left|right|top|bottom|l|r|t|b)$/;
-const SIZE_PATTERN = /^lx-(width|height|w|h)$/;
-
-const ALIAS_MAP = {
-    l: 'left', r: 'right', t: 'top', b: 'bottom',
-    w: 'width', h: 'height',
-};
-
-/**
- * @param {HTMLElement} el
- * @returns {ElementData|null}
- */
-function parseElement(el) {
-    const attrs = el.attributes;
-    /** @type {ElementData['constraints']} */
-    const constraints = {};
-    /** @type {ElementData['width']} */
-    let width;
-    /** @type {ElementData['height']} */
-    let height;
-    let isContainer = false;
-    let reference = null;
-
-    for (let i = 0; i < attrs.length; i++) {
-        const attr = attrs[i];
-        const name = attr.name;
-
-        const edgeMatch = name.match(EDGE_PATTERN);
-        if (edgeMatch) {
-            const edge = ALIAS_MAP[edgeMatch[1]] || edgeMatch[1];
-            constraints[edge] = {
-                edge,
-                value: parseValue(attr.value),
-            };
-            continue;
-        }
-
-        const sizeMatch = name.match(SIZE_PATTERN);
-        if (sizeMatch) {
-            const sizeName = ALIAS_MAP[sizeMatch[1]] || sizeMatch[1];
-            const val = attr.value;
-
-            if (val.includes('/')) {
-                const [minStr, maxStr] = val.split('/');
-                const min = parseFloat(minStr.trim());
-                const max = parseFloat(maxStr.trim());
-                if (sizeName === 'width') {
-                    width = { min, max };
-                } else {
-                    height = { min, max };
-                }
-            } else {
-                const num = parseFloat(val);
-                if (!isNaN(num)) {
-                    if (sizeName === 'width') {
-                        width = num;
-                    } else {
-                        height = num;
-                    }
-                }
-            }
-            continue;
-        }
-    }
-
-    const lxAttr = el.getAttribute('lx');
-    if (lxAttr !== null) {
-        if (lxAttr !== '') {
-            reference = lxAttr;
-        }
-        isContainer = true;
-    }
-
-    const hasPosition = Object.keys(constraints).length > 0 || width !== undefined || height !== undefined;
-
-    if (!hasPosition && !isContainer) {
-        return null;
-    }
-
-    const id = el.id;
-    if (!id && hasPosition) {
-        return null;
-    }
+function getBodyBox() {
+    /** @type {number} */
+    const width = document.documentElement.clientWidth;
+    /** @type {number} */
+    const height = document.documentElement.clientHeight;
 
     return {
-        id: id || '',
-        el,
-        isContainer,
-        reference,
-        constraints,
+        left: 0,
+        top: 0,
+        right: width,
+        bottom: height,
         width,
         height,
-        resolved: {},
     };
 }
 
 /**
- * @param {HTMLElement} element
- * @returns {string|null}
+ * @param {HTMLElement} el
+ * @returns {ResolvedBox}
  */
-function findContainer(element) {
-    let current = element.parentElement;
+function readElementBox(el) {
+    /** @type {DOMRect} */
+    const rect = el.getBoundingClientRect();
+    return cloneRect(rect);
+}
+
+/**
+ * @param {number} value
+ * @param {number} min
+ * @param {number} max
+ * @returns {number}
+ */
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+/**
+ * @param {string} text
+ * @param {string} [prefix]
+ * @returns {string}
+ */
+function indent(text, prefix = "  ") {
+    return text
+        .split("\n")
+        .map((line) => (line ? prefix + line : line))
+        .join("\n");
+}
+
+/**
+ * @param {PositionExpr | null} expr
+ * @returns {string}
+ */
+function formatPositionExpr(expr) {
+    if (!expr) return "";
+
+    if (expr.type === "body-ref") {
+        return `body.${expr.edge}${expr.offset >= 0 ? "+" : ""}${expr.offset}`;
+    }
+
+    return `#${expr.targetId}.${expr.edge}${expr.offset >= 0 ? "+" : ""}${expr.offset}`;
+}
+
+/**
+ * @param {SizeExpr | null} expr
+ * @returns {string}
+ */
+function formatSizeExpr(expr) {
+    if (!expr) return "";
+
+    if (expr.type === "fixed") {
+        return String(expr.value);
+    }
+
+    return `${expr.min}/${expr.max}`;
+}
+
+/**
+ * @param {CanonicalNode} node
+ * @returns {{
+ *   id: string,
+ *   left: string,
+ *   right: string,
+ *   top: string,
+ *   bottom: string,
+ *   width: string,
+ *   height: string,
+ *   refs: string
+ * }}
+ */
+function canonicalRow(node) {
+    return {
+        id: `#${node.id}`,
+        left: formatPositionExpr(node.left),
+        right: formatPositionExpr(node.right),
+        top: formatPositionExpr(node.top),
+        bottom: formatPositionExpr(node.bottom),
+        width: formatSizeExpr(node.width),
+        height: formatSizeExpr(node.height),
+        refs: Array.from(node.refs).map((id) => `#${id}`).join(", "),
+    };
+}
+
+/**
+ * @param {CanonicalNode} node
+ * @returns {{
+ *   id: string,
+ *   left: number|string,
+ *   top: number|string,
+ *   right: number|string,
+ *   bottom: number|string,
+ *   width: number|string,
+ *   height: number|string
+ * }}
+ */
+function resolvedRow(node) {
+    return {
+        id: `#${node.id}`,
+        left: node.resolved ? node.resolved.left : "",
+        top: node.resolved ? node.resolved.top : "",
+        right: node.resolved ? node.resolved.right : "",
+        bottom: node.resolved ? node.resolved.bottom : "",
+        width: node.resolved ? node.resolved.width : "",
+        height: node.resolved ? node.resolved.height : "",
+    };
+}
+
+/**
+ * @param {Map<string, CanonicalNode>} nodes
+ * @returns {void}
+ */
+function printParsedNodes(nodes) {
+    /** @type {ReturnType<typeof canonicalRow>[]} */
+    const rows = [];
+
+    for (const [, node] of nodes) {
+        rows.push(canonicalRow(node));
+    }
+
+    console.log("%c[lx] Parsed canonical nodes", "color:#3498db;font-weight:bold;");
+    console.table(rows);
+}
+
+/**
+ * @param {CanonicalNode[]} ordered
+ * @returns {void}
+ */
+function printDependencyOrder(ordered) {
+    console.log("%c[lx] Dependency order", "color:#9b59b6;font-weight:bold;");
+    console.log(ordered.map((node) => `#${node.id}`).join(" -> "));
+}
+
+/**
+ * @param {Map<string, CanonicalNode>} nodes
+ * @returns {void}
+ */
+function printResolvedNodes(nodes) {
+    /** @type {ReturnType<typeof resolvedRow>[]} */
+    const rows = [];
+
+    for (const [, node] of nodes) {
+        rows.push(resolvedRow(node));
+    }
+
+    console.log("%c[lx] Resolved boxes", "color:#27ae60;font-weight:bold;");
+    console.table(rows);
+}
+
+/**
+ * @param {CanonicalNode} node
+ * @returns {{
+ *   id: string,
+ *   cssLeft: string,
+ *   cssTop: string,
+ *   cssWidth: string,
+ *   cssHeight: string
+ * }}
+ */
+function appliedCssRow(node) {
+    return {
+        id: `#${node.id}`,
+        cssLeft: node.el.style.left || "",
+        cssTop: node.el.style.top || "",
+        cssWidth: node.el.style.width || "",
+        cssHeight: node.el.style.height || "",
+    };
+}
+
+/**
+ * @param {Map<string, CanonicalNode>} nodes
+ * @returns {void}
+ */
+function printAppliedCss(nodes) {
+    /** @type {ReturnType<typeof appliedCssRow>[]} */
+    const rows = [];
+
+    for (const [, node] of nodes) {
+        rows.push(appliedCssRow(node));
+    }
+
+    console.log("%c[lx] Applied CSS", "color:#e67e22;font-weight:bold;");
+    console.table(rows);
+}
+
+/**
+ * Returns the nearest ancestor CanonicalNode that acts as the containing block.
+ * If none exists, body is used.
+ *
+ * @param {CanonicalNode} node
+ * @param {Map<string, CanonicalNode>} nodes
+ * @returns {CanonicalNode | null}
+ */
+function findContainingBlock(node, nodes) {
+    /** @type {HTMLElement | null} */
+    let current = node.el.parentElement;
 
     while (current && current !== document.body) {
-        if (current.hasAttribute('lx')) {
-            if (current.id) {
-                return current.id;
-            }
+        if (current.id && nodes.has(current.id)) {
+            return /** @type {CanonicalNode} */ (nodes.get(current.id));
         }
         current = current.parentElement;
     }
@@ -683,278 +431,662 @@ function findContainer(element) {
 }
 
 /**
- * @param {HTMLElement} element
- * @returns {string|null}
+ * --------------------------------------------------------------------------
+ * Parsing
+ * --------------------------------------------------------------------------
  */
-function findReference(element) {
-    const lxAttr = element.getAttribute('lx');
-    if (lxAttr !== null && lxAttr !== '') {
-        if (lxAttr === 'body' || document.getElementById(lxAttr)) {
-            return lxAttr;
-        }
-    }
-
-    return findContainer(element);
-}
-
-// ============================================================================
-// Main Runtime
-// ============================================================================
 
 /**
- * @param {Value} value
- * @returns {string}
- */
-function formatValue(value) {
-    if (value.type === 'number') {
-        return String(value.value);
-    }
-    return `#${value.targetId}.${value.edge}${value.offset >= 0 ? '+' : ''}${value.offset}`;
-}
-
-/**
- * @param {{min:number,max:number}|number|undefined} size
- * @returns {string}
- */
-function formatSize(size) {
-    if (size === undefined) return '';
-    if (typeof size === 'number') return String(size);
-    return `${size.min}/${size.max}`;
-}
-
-/**
+ * @param {string} raw
+ * @param {PositionAttrName} attrName
  * @param {HTMLElement} el
- * @returns {boolean}
+ * @returns {PositionExpr}
  */
-function isRootElement(el) {
-    return !el.parentElement ||
-        el.parentElement === document.body ||
-        el.parentElement === document.documentElement;
-}
+function parsePositionExpr(raw, attrName, el) {
+    /** @type {string} */
+    const value = String(raw).trim();
 
-/**
- * Print debug info - one table per container
- * @param {Map<string, ElementData>} elements
- * @param {boolean} [showResolved]
- */
-function printDebug(elements, showResolved) {
-    const printed = new Set();
+    /** @type {RegExpMatchArray | null} */
+    const match = value.match(POSITION_RE);
 
-    /**
-     * @param {ElementData} container
-     */
-    function printContainer(container) {
-        const rows = [];
-
-        for (const [, element] of elements) {
-            if (element.el.parentElement === container.el && !printed.has(element.id)) {
-                printed.add(element.id);
-
-                const constraints = element.constraints;
-                const resolved = element.resolved;
-
-                const row = {
-                    id: '#' + element.id,
-                    'c': element.isContainer ? '✓' : ' ',
-                    left: constraints.left ? formatValue(constraints.left.value) : ' ',
-                    right: constraints.right ? formatValue(constraints.right.value) : ' ',
-                    width: formatSize(element.width) || ' ',
-                    top: constraints.top ? formatValue(constraints.top.value) : ' ',
-                    bottom: constraints.bottom ? formatValue(constraints.bottom.value) : ' ',
-                    height: formatSize(element.height) || ' ',
-                    '→ left': ' ',
-                    '→ top': ' ',
-                    '→ right': ' ',
-                    '→ bottom': ' ',
-                    '→ width': ' ',
-                    '→ height': ' ',
-                };
-
-                if (showResolved) {
-                    let cssLeft = resolved.left;
-                    let cssTop = resolved.top;
-
-                    if (element.reference) {
-                        const refElement = elements.get(element.reference);
-                        if (refElement && refElement.resolved) {
-                            if (cssLeft !== undefined && refElement.resolved.left !== undefined) {
-                                cssLeft = cssLeft - refElement.resolved.left;
-                            }
-                            if (cssTop !== undefined && refElement.resolved.top !== undefined) {
-                                cssTop = cssTop - refElement.resolved.top;
-                            }
-                        }
-                    }
-
-                    row['→ left'] = cssLeft !== undefined ? cssLeft : ' ';
-                    row['→ top'] = cssTop !== undefined ? cssTop : ' ';
-                    row['→ width'] = resolved.width !== undefined ? resolved.width : ' ';
-                    row['→ height'] = resolved.height !== undefined ? resolved.height : ' ';
-                }
-
-                rows.push(row);
-
-                if (element.isContainer) {
-                    printContainer(element);
-                }
-            }
-        }
-
-        if (rows.length > 0) {
-            console.log(`%c#${container.id || 'body'}`, 'color: #9b59b6; font-weight: bold;');
-            if (showResolved) {
-                console.table(rows, ['id', 'c', '→ left', '→ top', '→ width', '→ height']);
-            } else {
-                console.table(rows, ['id', 'c', 'left', 'right', 'top', 'bottom', 'width', 'height']);
-            }
-
-        }
+    if (!match) {
+        throw new Error(
+            `[lx] Invalid ${attrName}="${value}" on ${describeEl(el)}. ` +
+            `Expected "body.edge+N" or "#id.edge+N".`
+        );
     }
 
-    for (const [, element] of elements) {
-        if (element.isContainer && !printed.has(element.id) && isRootElement(element.el)) {
-            printContainer(element);
-        }
+    /** @type {string} */
+    const targetToken = match[1];
+    /** @type {string | null} */
+    const targetId = match[2] || null;
+    /** @type {Edge} */
+    const edge = /** @type {Edge} */ (match[3]);
+    /** @type {number} */
+    const offset = match[4] ? Number(match[4]) : 0;
+
+    if (targetToken === "body") {
+        /** @type {BodyPositionExpr} */
+        const expr = {
+            type: "body-ref",
+            edge,
+            offset,
+            raw: value,
+        };
+        return expr;
     }
-}
 
-/**
- * Initialize the lx layout engine
- * @param {HTMLElement} [root] - Root element to scan (defaults to document.body)
- * @param {{debug?: boolean}} [options]
- * @returns {LxResult}
- */
-function init(root, options = {}) {
-    root = root || document.body;
-
-    /** @type {LxError[]} */
-    const errors = [];
-    /** @type {Map<string, ElementData>} */
-    const elements = new Map();
-
-    /**
-     * @param {HTMLElement} node
-     */
-    const walk = (node) => {
-        const parsed = parseElement(node);
-        if (parsed && parsed.id) {
-            if (elements.has(parsed.id)) {
-                errors.push({
-                    type: 'SYNTAX_ERROR',
-                    elementId: parsed.id,
-                    message: `Duplicate id: ${parsed.id}`,
-                });
-            } else {
-                elements.set(parsed.id, parsed);
-            }
-        }
-
-        for (const child of Array.from(node.children)) {
-            walk(/** @type {HTMLElement} */(child));
-        }
+    /** @type {ElementPositionExpr} */
+    const expr = {
+        type: "element-ref",
+        targetId: /** @type {string} */ (targetId),
+        edge,
+        offset,
+        raw: value,
     };
+    return expr;
+}
 
-    walk(root);
+/**
+ * @param {string} raw
+ * @param {SizeAttrName} attrName
+ * @param {HTMLElement} el
+ * @returns {SizeExpr}
+ */
+function parseSizeExpr(raw, attrName, el) {
+    /** @type {string} */
+    const value = String(raw).trim();
 
-    if (options.debug) {
-        console.log('%c[lx] Parsed', 'color: #3498db; font-weight: bold; font-size: 14px;');
-        printDebug(elements);
+    if (FIXED_SIZE_RE.test(value)) {
+        /** @type {FixedSizeExpr} */
+        const expr = {
+            type: "fixed",
+            value: Number(value),
+            raw: value,
+        };
+        return expr;
     }
 
-    for (const [, element] of elements) {
-        if (!element.reference) {
-            element.reference = findReference(element.el);
+    /** @type {RegExpMatchArray | null} */
+    const rangeMatch = value.match(RANGE_SIZE_RE);
+    if (rangeMatch) {
+        /** @type {number} */
+        const min = Number(rangeMatch[1]);
+        /** @type {number} */
+        const max = Number(rangeMatch[2]);
+
+        if (min > max) {
+            throw new Error(
+                `[lx] Invalid ${attrName}="${value}" on ${describeEl(el)}: min > max.`
+            );
         }
+
+        /** @type {RangeSizeExpr} */
+        const expr = {
+            type: "range",
+            min,
+            max,
+            raw: value,
+        };
+        return expr;
     }
 
-    for (const [, element] of elements) {
-        if (!element.reference || element.reference === 'body') continue;
+    throw new Error(
+        `[lx] Invalid ${attrName}="${value}" on ${describeEl(el)}. ` +
+        `Expected "300" or "200/500".`
+    );
+}
 
-        const container = elements.get(element.reference);
-        if (!container) continue;
+/**
+ * --------------------------------------------------------------------------
+ * Collection
+ * --------------------------------------------------------------------------
+ */
 
-        const makeRelative = (edge) => {
-            const constraint = element.constraints[edge];
-            if (constraint && constraint.value.type === 'number') {
-                constraint.value = {
-                    type: 'ref',
-                    targetId: element.reference,
-                    edge,
-                    offset: constraint.value.value,
-                };
-            }
+/**
+ * @param {ParentNode} root
+ * @returns {Map<string, CanonicalNode>}
+ */
+function collectNodes(root) {
+    /** @type {HTMLElement[]} */
+    const elements = Array.from(root.querySelectorAll("*")).filter(hasLxAttrs);
+
+    /** @type {Map<string, CanonicalNode>} */
+    const nodes = new Map();
+
+    for (const el of elements) {
+        if (!el.id) {
+            throw new Error(
+                `[lx] Canonical elements must have an id: ${describeEl(el)}`
+            );
+        }
+
+        if (nodes.has(el.id)) {
+            throw new Error(`[lx] Duplicate id "${el.id}".`);
+        }
+
+        /** @type {CanonicalNode} */
+        const node = {
+            id: el.id,
+            el,
+            left: el.hasAttribute("lx-left")
+                ? parsePositionExpr(
+            /** @type {string} */(el.getAttribute("lx-left")),
+                    "lx-left",
+                    el
+                )
+                : null,
+            right: el.hasAttribute("lx-right")
+                ? parsePositionExpr(
+            /** @type {string} */(el.getAttribute("lx-right")),
+                    "lx-right",
+                    el
+                )
+                : null,
+            top: el.hasAttribute("lx-top")
+                ? parsePositionExpr(
+            /** @type {string} */(el.getAttribute("lx-top")),
+                    "lx-top",
+                    el
+                )
+                : null,
+            bottom: el.hasAttribute("lx-bottom")
+                ? parsePositionExpr(
+            /** @type {string} */(el.getAttribute("lx-bottom")),
+                    "lx-bottom",
+                    el
+                )
+                : null,
+            width: el.hasAttribute("lx-width")
+                ? parseSizeExpr(
+            /** @type {string} */(el.getAttribute("lx-width")),
+                    "lx-width",
+                    el
+                )
+                : null,
+            height: el.hasAttribute("lx-height")
+                ? parseSizeExpr(
+            /** @type {string} */(el.getAttribute("lx-height")),
+                    "lx-height",
+                    el
+                )
+                : null,
+            refs: new Set(),
+            resolved: null,
         };
 
-        makeRelative('left');
-        makeRelative('right');
-        makeRelative('top');
-        makeRelative('bottom');
+        nodes.set(node.id, node);
     }
 
-    for (const [, element] of elements) {
-        const error = validateConstraints(element, elements);
-        if (error) {
-            errors.push(error);
-        }
-    }
-
-    const { graph, errors: graphErrors } = buildDependencyGraph(elements);
-    errors.push(...graphErrors);
-
-    if (errors.length > 0) {
-        return { errors };
-    }
-
-    resolveLayout(elements, graph);
-
-    if (options.debug) {
-        console.log('%c[lx] Resolved', 'color: #27ae60; font-weight: bold; font-size: 14px;');
-        printDebug(elements, true);
-    }
-
-    for (const [, element] of elements) {
-        const css = generateCSS(element, elements);
-        const hasPositioning = element.constraints.left || element.constraints.top ||
-            element.constraints.right || element.constraints.bottom;
-        applyCSS(element.el, css, element.isContainer, hasPositioning);
-    }
-
-    return { errors };
+    return nodes;
 }
 
-// ============================================================================
-// Auto-init
-// ============================================================================
+/**
+ * --------------------------------------------------------------------------
+ * Validation
+ * --------------------------------------------------------------------------
+ */
 
-if (typeof window !== 'undefined' && window.document) {
-    const isDebug = new URLSearchParams(window.location.search).has('lx-debug');
-    const debugOptions = { debug: isDebug };
+/**
+ * @param {Map<string, CanonicalNode>} nodes
+ * @returns {void}
+ */
+function validateNodes(nodes) {
+    for (const [, node] of nodes) {
+        /** @type {number} */
+        const horizontalCount =
+            Number(node.left !== null) +
+            Number(node.right !== null) +
+            Number(node.width !== null);
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            const result = init(undefined, debugOptions);
-            if (result.errors.length > 0) {
-                console.error('%c[lx]', 'color: #e74c3c; font-weight: bold;', 'Error');
-                console.table(result.errors);
+        /** @type {number} */
+        const verticalCount =
+            Number(node.top !== null) +
+            Number(node.bottom !== null) +
+            Number(node.height !== null);
+
+        if (horizontalCount !== 2) {
+            throw new Error(
+                `[lx] ${describeEl(node.el)} must have exactly 2 horizontal constraints ` +
+                `(lx-left, lx-right, lx-width).`
+            );
+        }
+
+        if (verticalCount !== 2) {
+            throw new Error(
+                `[lx] ${describeEl(node.el)} must have exactly 2 vertical constraints ` +
+                `(lx-top, lx-bottom, lx-height).`
+            );
+        }
+
+        if (node.width?.type === "range" && node.height?.type === "range") {
+            throw new Error(
+                `[lx] ${describeEl(node.el)} cannot use range for both lx-width and lx-height.`
+            );
+        }
+
+        /** @type {(PositionExpr | null)[]} */
+        const positionExprs = [node.left, node.right, node.top, node.bottom];
+        for (const expr of positionExprs) {
+            if (!expr) continue;
+
+            if (expr.type === "element-ref") {
+                if (!nodes.has(expr.targetId)) {
+                    throw new Error(
+                        `[lx] ${describeEl(node.el)} references missing id "#${expr.targetId}".`
+                    );
+                }
+                node.refs.add(expr.targetId);
             }
-        });
-    } else {
-        const result = init(undefined, debugOptions);
-        if (result.errors.length > 0) {
-            console.error('%c[lx]', 'color: #e74c3c; font-weight: bold;', 'Error');
-            console.table(result.errors);
         }
     }
 }
 
-// ============================================================================
-// Exports
-// ============================================================================
+/**
+ * @param {Map<string, CanonicalNode>} nodes
+ * @returns {void}
+ */
+function detectCycles(nodes) {
+    /** @type {Set<string>} */
+    const visiting = new Set();
+    /** @type {Set<string>} */
+    const visited = new Set();
+    /** @type {string[]} */
+    const path = [];
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { init };
+    /**
+     * @param {string} id
+     * @returns {void}
+     */
+    function dfs(id) {
+        if (visited.has(id)) return;
+
+        if (visiting.has(id)) {
+            /** @type {number} */
+            const cycleStart = path.indexOf(id);
+            /** @type {string} */
+            const cycle = [...path.slice(cycleStart), id]
+                .map((x) => `#${x}`)
+                .join(" -> ");
+            throw new Error(`[lx] Circular dependency detected: ${cycle}`);
+        }
+
+        visiting.add(id);
+        path.push(id);
+
+        /** @type {CanonicalNode | undefined} */
+        const node = nodes.get(id);
+        if (!node) {
+            throw new Error(`[lx] Internal error: node "${id}" not found.`);
+        }
+
+        for (const dep of node.refs) {
+            dfs(dep);
+        }
+
+        path.pop();
+        visiting.delete(id);
+        visited.add(id);
+    }
+
+    for (const id of nodes.keys()) {
+        dfs(id);
+    }
 }
 
-if (typeof window !== 'undefined') {
-    window.lx = { init };
+/**
+ * @param {Map<string, CanonicalNode>} nodes
+ * @returns {CanonicalNode[]}
+ */
+function topologicalSort(nodes) {
+    /** @type {CanonicalNode[]} */
+    const ordered = [];
+    /** @type {Set<string>} */
+    const visited = new Set();
+
+    /**
+     * @param {string} id
+     * @returns {void}
+     */
+    function visit(id) {
+        if (visited.has(id)) return;
+        visited.add(id);
+
+        /** @type {CanonicalNode | undefined} */
+        const node = nodes.get(id);
+        if (!node) {
+            throw new Error(`[lx] Internal error: node "${id}" not found.`);
+        }
+
+        for (const dep of node.refs) {
+            visit(dep);
+        }
+
+        ordered.push(node);
+    }
+
+    for (const id of nodes.keys()) {
+        visit(id);
+    }
+
+    return ordered;
 }
+
+/**
+ * --------------------------------------------------------------------------
+ * CSS Helpers
+ * --------------------------------------------------------------------------
+ */
+
+/**
+ * Ensures an element can be used as positioned container target if needed.
+ *
+ * @param {HTMLElement} el
+ * @returns {void}
+ */
+function ensurePositionable(el) {
+    /** @type {CSSStyleDeclaration} */
+    const style = window.getComputedStyle(el);
+
+    if (style.position === "static") {
+        el.style.position = "absolute";
+    }
+
+    el.style.boxSizing = "border-box";
+}
+
+/**
+ * @param {CanonicalNode} node
+ * @returns {void}
+ */
+function applyBaseSizeCSS(node) {
+    const { el, width, height } = node;
+
+    ensurePositionable(el);
+
+    if (width) {
+        if (width.type === "fixed") {
+            el.style.width = px(width.value);
+        } else {
+            el.style.width = "auto";
+            el.style.minWidth = px(width.min);
+            el.style.maxWidth = px(width.max);
+        }
+    }
+
+    if (height) {
+        if (height.type === "fixed") {
+            el.style.height = px(height.value);
+        } else {
+            el.style.height = "auto";
+            el.style.minHeight = px(height.min);
+            el.style.maxHeight = px(height.max);
+        }
+    }
+}
+
+/**
+ * @param {CanonicalNode} node
+ * @returns {void}
+ */
+function clearInsetCSS(node) {
+    node.el.style.left = "";
+    node.el.style.right = "";
+    node.el.style.top = "";
+    node.el.style.bottom = "";
+}
+
+/**
+ * --------------------------------------------------------------------------
+ * Resolution
+ * --------------------------------------------------------------------------
+ */
+
+/**
+ * Resolves a position expression into an absolute viewport coordinate.
+ *
+ * @param {PositionExpr} expr
+ * @param {Map<string, CanonicalNode>} nodes
+ * @returns {number}
+ */
+function resolvePositionExpr(expr, nodes) {
+    if (expr.type === "body-ref") {
+        /** @type {ResolvedBox} */
+        const bodyBox = getBodyBox();
+        return bodyBox[expr.edge] + expr.offset;
+    }
+
+    /** @type {CanonicalNode | undefined} */
+    const targetNode = nodes.get(expr.targetId);
+    if (!targetNode || !targetNode.resolved) {
+        throw new Error(`[lx] Cannot resolve reference "#${expr.targetId}".`);
+    }
+
+    return targetNode.resolved[expr.edge] + expr.offset;
+}
+
+/**
+ * Resolves a node into an absolute viewport box.
+ *
+ * This does not attempt to solve arbitrary constraints. It only supports the
+ * canonical rule that each axis has exactly 2 constraints.
+ *
+ * @param {CanonicalNode} node
+ * @param {Map<string, CanonicalNode>} nodes
+ * @returns {ResolvedBox}
+ */
+function resolveNode(node, nodes) {
+    /** @type {number | undefined} */
+    let left;
+    /** @type {number | undefined} */
+    let right;
+    /** @type {number | undefined} */
+    let top;
+    /** @type {number | undefined} */
+    let bottom;
+    /** @type {number | undefined} */
+    let width;
+    /** @type {number | undefined} */
+    let height;
+
+    if (node.left) {
+        left = resolvePositionExpr(node.left, nodes);
+    }
+    if (node.right) {
+        right = resolvePositionExpr(node.right, nodes);
+    }
+    if (node.top) {
+        top = resolvePositionExpr(node.top, nodes);
+    }
+    if (node.bottom) {
+        bottom = resolvePositionExpr(node.bottom, nodes);
+    }
+
+    // Width / Height pre-application:
+    // - fixed: known now
+    // - range: let CSS determine it first, then read actual box later
+    if (node.width?.type === "fixed") {
+        width = node.width.value;
+    }
+    if (node.height?.type === "fixed") {
+        height = node.height.value;
+    }
+
+    /**
+     * First pass: if any range dimension exists, let CSS establish the rendered
+     * size, then read the actual size from the DOM.
+     */
+    if (node.width?.type === "range" || node.height?.type === "range") {
+        // Apply whatever inset is already computable so CSS can size content properly.
+        clearInsetCSS(node);
+
+        if (left !== undefined) node.el.style.left = px(left);
+        if (right !== undefined) node.el.style.right = px(right);
+        if (top !== undefined) node.el.style.top = px(top);
+        if (bottom !== undefined) node.el.style.bottom = px(bottom);
+
+        /** @type {ResolvedBox} */
+        const measured = readElementBox(node.el);
+
+        if (node.width?.type === "range") {
+            width = clamp(measured.width, node.width.min, node.width.max);
+            node.el.style.width = px(width);
+        }
+
+        if (node.height?.type === "range") {
+            height = clamp(measured.height, node.height.min, node.height.max);
+            node.el.style.height = px(height);
+        }
+    }
+
+    // Final solve per axis
+    if (left !== undefined && right !== undefined) {
+        width = right - left;
+    } else if (left !== undefined && width !== undefined) {
+        right = left + width;
+    } else if (right !== undefined && width !== undefined) {
+        left = right - width;
+    }
+
+    if (top !== undefined && bottom !== undefined) {
+        height = bottom - top;
+    } else if (top !== undefined && height !== undefined) {
+        bottom = top + height;
+    } else if (bottom !== undefined && height !== undefined) {
+        top = bottom - height;
+    }
+
+    if (
+        left === undefined ||
+        right === undefined ||
+        top === undefined ||
+        bottom === undefined ||
+        width === undefined ||
+        height === undefined
+    ) {
+        throw new Error(`[lx] Failed to resolve ${describeEl(node.el)}.`);
+    }
+
+    /** @type {ResolvedBox} */
+    const box = {
+        left,
+        right,
+        top,
+        bottom,
+        width,
+        height,
+    };
+
+    return box;
+}
+
+/**
+ * Applies a resolved box as regular CSS.
+ * The resolved box is in viewport coordinates, but CSS left/top for absolute
+ * positioning must be relative to the containing block.
+ *
+ * @param {CanonicalNode} node
+ * @param {ResolvedBox} box
+ * @param {Map<string, CanonicalNode>} nodes
+ * @returns {void}
+ */
+function applyResolvedBox(node, box, nodes) {
+    ensurePositionable(node.el);
+
+    /** @type {CanonicalNode | null} */
+    const container = findContainingBlock(node, nodes);
+
+    /** @type {number} */
+    const baseLeft = container && container.resolved ? container.resolved.left : 0;
+    /** @type {number} */
+    const baseTop = container && container.resolved ? container.resolved.top : 0;
+
+    /** @type {number} */
+    const cssLeft = box.left - baseLeft;
+    /** @type {number} */
+    const cssTop = box.top - baseTop;
+
+    node.el.style.left = px(cssLeft);
+    node.el.style.top = px(cssTop);
+    node.el.style.width = px(box.width);
+    node.el.style.height = px(box.height);
+    node.el.style.right = "";
+    node.el.style.bottom = "";
+}
+
+
+/**
+ * --------------------------------------------------------------------------
+ * Main
+ * --------------------------------------------------------------------------
+ */
+
+/**
+ * @param {ParentNode} [root=document.body]
+ * @param {InitOptions} [options={}]
+ * @returns {void}
+ */
+function init(root = document.body, options = {}) {
+    /** @type {boolean} */
+    const debug = Boolean(options.debug);
+
+    /** @type {Map<string, CanonicalNode>} */
+    const nodes = collectNodes(root);
+
+    validateNodes(nodes);
+    detectCycles(nodes);
+
+    /** @type {CanonicalNode[]} */
+    const ordered = topologicalSort(nodes);
+
+    if (debug) {
+        printParsedNodes(nodes);
+        printDependencyOrder(ordered);
+    }
+
+    // Apply base CSS first so DOM has usable dimensions before reading boxes.
+    for (const node of ordered) {
+        applyBaseSizeCSS(node);
+    }
+
+    // Resolve and apply in dependency order.
+    for (const node of ordered) {
+        /** @type {ResolvedBox} */
+        const box = resolveNode(node, nodes);
+        node.resolved = box;
+        applyResolvedBox(node, box, nodes);
+    }
+
+    if (debug) {
+        printResolvedNodes(nodes);
+        printAppliedCss(nodes);
+    }
+}
+
+/**
+ * @returns {void}
+ */
+function boot() {
+    try {
+        /** @type {URLSearchParams} */
+        const params = new URLSearchParams(window.location.search);
+        /** @type {boolean} */
+        const debug = params.has("lx-debug");
+
+        init(document.body, { debug });
+    } catch (error) {
+        console.error("%c[lx] Error", "color:#e74c3c;font-weight:bold;");
+        console.error(error);
+    }
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+} else {
+    boot();
+}
+
+/**
+ * @type {{ init: (root?: ParentNode, options?: InitOptions) => void }}
+ */
+window.lx = { init };

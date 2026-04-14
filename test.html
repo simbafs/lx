@@ -14,18 +14,61 @@
 				font-size: 4rem;
 				font-family: sans-serif;
 				box-sizing: border-box;
+				overflow: hidden;
 			}
 		</style>
 	</head>
 	<body>
-		<div id="screen" lx lx-t="0" lx-l="0" lx-w="1920" lx-h="1080">
-			<div id="main" lx-t="50" lx-h="756" lx-l="50" lx-w="1344">main</div>
-			<div id="sidebar" lx lx-t="50" lx-h="756" lx-l="#main.right+20" lx-r="-50">
-				<div id="info" lx-t="0" lx-h="200/500" lx-r="0" lx-l="0">info</div>
-				<div id="qa" lx-t="#info.bottom+20" lx-h="100" lx-r="0" lx-l="0">qa</div>
-				<div id="logo" lx-t="#qa.bottom+20" lx-b="0" lx-l="0" lx-r="0">logo</div>
+		<div id="screen" lx-left="body.left+0" lx-top="body.top+0" lx-width="1920" lx-height="1080">
+			<div id="main" lx-left="#screen.left+50" lx-top="#screen.top+50" lx-width="1344" lx-height="756">main</div>
+
+			<div
+				id="sidebar"
+				lx-left="#main.right+20"
+				lx-right="#screen.right-50"
+				lx-top="#screen.top+50"
+				lx-height="756"
+			>
+				<div
+					id="info"
+					lx-left="#sidebar.left+0"
+					lx-right="#sidebar.right+0"
+					lx-top="#sidebar.top+0"
+					lx-height="200/500"
+				>
+					info
+				</div>
+
+				<div
+					id="qa"
+					lx-left="#sidebar.left+0"
+					lx-right="#sidebar.right+0"
+					lx-top="#info.bottom+20"
+					lx-height="100"
+				>
+					qa
+				</div>
+
+				<div
+					id="logo"
+					lx-left="#sidebar.left+0"
+					lx-right="#sidebar.right+0"
+					lx-top="#qa.bottom+20"
+					lx-bottom="#sidebar.bottom+0"
+				>
+					logo
+				</div>
 			</div>
-			<div id="ad" lx-t="#main.bottom+20" lx-b="-50" lx-l="50" lx-r="-50">AD</div>
+
+			<div
+				id="ad"
+				lx-left="#screen.left+50"
+				lx-right="#screen.right-50"
+				lx-top="#main.bottom+20"
+				lx-bottom="#screen.bottom-50"
+			>
+				AD
+			</div>
 		</div>
 	</body>
 </html>
