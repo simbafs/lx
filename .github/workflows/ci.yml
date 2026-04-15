@@ -1,48 +1,64 @@
-name: CI
+name: CI & Release
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    push:
+        branches: [main]
+        tags: ['v*.*.*']
+    pull_request:
+        branches: [main]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 25
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps
-      - run: pnpm test
+    # 階段一：安裝與測試
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 25
+                  cache: 'pnpm'
 
-  publish:
-    needs: test
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 25
-          cache: pnpm
-          registry: https://npm.pkg.github.com
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 25
-          registry: https://npm.pkg.github.com
-      - run: npm publish --access public --tag latest
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Run Tests
+              run: pnpm test
+
+            - name: Build project
+              if: startsWith(github.ref, 'refs/tags/v')
+              run: pnpm build
+
+            - name: Upload Build Artifact
+              if: startsWith(github.ref, 'refs/tags/v')
+              uses: actions/upload-artifact@v4
+              with:
+                  name: build-dist
+                  path: dist/ 
+
+    # 階段二：發布 (僅在 tag 時執行)
+    publish:
+        needs: test
+        if: startsWith(github.ref, 'refs/tags/v')
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 25
+                  registry-url: 'https://npm.pkg.github.com'
+
+            - name: Download Build Artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: build-dist
+                  path: dist/
+
+            - name: Publish to GitHub Packages
+              run: npm publish --access public
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
