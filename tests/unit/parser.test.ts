@@ -68,6 +68,22 @@ describe('evaluateMath', () => {
 	it('should throw on empty expression', () => {
 		expect(() => evaluateMath('', body)).toThrow('[lx] Empty expression')
 	})
+
+	it('should handle unary minus with variable', () => {
+		body.setAttribute('data-lx-border', '10')
+		expect(evaluateMath('(-{border})', body)).toBe(-10)
+	})
+
+	it('should handle unary plus with variable', () => {
+		body.setAttribute('data-lx-value', '15')
+		expect(evaluateMath('(+{value})', body)).toBe(15)
+	})
+
+	it('should handle unary minus with expression', () => {
+		body.setAttribute('data-lx-a', '5')
+		body.setAttribute('data-lx-b', '3')
+		expect(evaluateMath('(-{a}+{b})', body)).toBe(-2)
+	})
 })
 
 describe('resolveValue', () => {

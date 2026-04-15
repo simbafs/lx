@@ -116,7 +116,22 @@ export function evaluateMath(expr: string, el: HTMLElement): number {
 		throw new Error(`[lx] Nested parentheses are not supported: (${expr})`)
 	}
 
-	const tokens = tokenizeMathExpr(expr, el)
+	let innerExpr = expr
+	if (EXPRESSION_RE.test(expr)) {
+		innerExpr = expr.replace(/^\(|\)$/g, '')
+	}
+
+	// Handle unary operators: -{var} -> 0-{var}
+	const unaryOpMatch = innerExpr.match(/^([+\-]+)(.+)$/)
+	if (unaryOpMatch) {
+		const op = unaryOpMatch[1]
+		const rest = unaryOpMatch[2]
+		if (!/^[+\-]?\d/.test(rest)) {
+			innerExpr = `0${op}${rest}`
+		}
+	}
+
+	const tokens = tokenizeMathExpr(innerExpr, el)
 
 	if (tokens.length === 0) {
 		throw new Error(`[lx] Empty expression on ${describeEl(el)}.`)
