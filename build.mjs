@@ -5,10 +5,11 @@ const isWatch = process.argv.includes('--watch')
 const buildOptions = [
 	{
 		entryPoints: ['src/index.ts'],
-		outfile: 'dist/index.min.js',
+		outfile: 'dist/lx.min.js',
 		bundle: true,
 		minify: true,
 		sourcemap: true,
+		sourcesContent: true,
 		format: 'iife',
 		target: ['es2020'],
 		banner: {
@@ -17,10 +18,11 @@ const buildOptions = [
 	},
 	{
 		entryPoints: ['src/auto.ts'],
-		outfile: 'dist/auto.min.js',
+		outfile: 'dist/lx-auto.min.js',
 		bundle: true,
 		minify: true,
 		sourcemap: true,
+		sourcesContent: true,
 		format: 'iife',
 		target: ['es2020'],
 	},
@@ -37,7 +39,7 @@ async function build() {
 		for (const opts of buildOptions) {
 			await esbuild.build(opts)
 		}
-		console.log('Build complete: dist/index.min.js, dist/auto.min.js')
+		console.log('Build complete: dist/lx.min.js, dist/lx-auto.min.js')
 	}
 }
 

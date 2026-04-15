@@ -13,11 +13,23 @@
 
 ## Quick Start
 
-Include the core engine and the automation module in your HTML:
+## Installation
+
+### Option 1: CDN (Recommended)
 
 ```html
-<script src="dist/index.min.js"></script>
-<script src="dist/auto.min.js"></script>
+<script src="https://raw.githubusercontent.com/simbafs/lx/refs/heads/main/dist/lx.min.js"></script>
+<script src="https://raw.githubusercontent.com/simbafs/lx/refs/heads/main/dist/lx-auto.min.js"></script>
+```
+
+### Option 2: Download
+
+Download `lx.min.js` and `lx-auto.min.js` from the [dist](dist/) folder and include them in your project.
+
+### Option 3: npm
+
+```bash
+npm install simbafs/lx
 ```
 
 ### Basic Example
