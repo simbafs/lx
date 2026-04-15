@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { JSDOM } from 'jsdom'
-import { evaluateMath, resolveValue, getVariable, parseAspectExpr } from '../../src/parser'
+import { evaluateMath, resolveValue, getVariable, parseAspectExpr, expandSugarToCanonical } from '../../src/parser'
 
 describe('evaluateMath', () => {
 	let document: Document
@@ -209,5 +209,47 @@ describe('parseAspectExpr', () => {
 
 	it('should throw on non-numeric values', () => {
 		expect(() => parseAspectExpr('a:b', el)).toThrow('[lx] Invalid lx-aspect')
+	})
+})
+
+describe('expandSugarToCanonical', () => {
+	let document: Document
+	let body: HTMLElement
+	let container: HTMLElement
+	let target: HTMLElement
+
+	beforeEach(() => {
+		const dom = new JSDOM(`
+			<!DOCTYPE html>
+			<html><body data-lx-gap="25">
+				<div id="container" lx></div>
+			</body></html>
+		`)
+		document = dom.window.document
+		;(global as any).document = document
+		body = document.body
+		container = document.getElementById('container') as HTMLElement
+		target = document.createElement('div')
+		target.id = 'target'
+		container.appendChild(target)
+	})
+
+	it('should expand position with expression and minus sign correctly', () => {
+		target.setAttribute('lx-b', '#target.top-({gap})')
+		const result = expandSugarToCanonical(target, new Set(['container']), new Map(), new Map())
+		expect(result.bottom?.value).toBe('#target.top-25')
+	})
+
+	it('should expand position with expression and plus sign correctly', () => {
+		target.setAttribute('lx-b', '#target.top+({gap})')
+		const result = expandSugarToCanonical(target, new Set(['container']), new Map(), new Map())
+		expect(result.bottom?.value).toBe('#target.top+25')
+	})
+
+	it('should expand position with negative expression', () => {
+		body.setAttribute('data-lx-gap', '-10')
+		target.setAttribute('lx-b', '#target.top-({gap})')
+		const result = expandSugarToCanonical(target, new Set(['container']), new Map(), new Map())
+		expect(result.bottom?.value).toBe('#target.top+10')
 	})
 })

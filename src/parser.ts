@@ -313,15 +313,17 @@ export function expandSugarToCanonical(
 
 		const ref = exprMatch[1]
 		const edge = exprMatch[3]
+		const originalSign = exprMatch[4]
 		const rawExpr = exprMatch[5]
 
 		const exprMatch2 = rawExpr.match(EXPRESSION_RE)
 		if (!exprMatch2) return null
 
 		const evaluated = evaluateMath(exprMatch2[1], el)
-		const signStr = evaluated >= 0 ? '+' : ''
+		const finalValue = originalSign === '-' ? -evaluated : evaluated
+		const signStr = finalValue >= 0 ? '+' : ''
 
-		return `${ref}.${edge}${signStr}${evaluated}`
+		return `${ref}.${edge}${signStr}${finalValue}`
 	}
 
 	const convertPositionToCanonical = (value: string, edge: Edge, el: HTMLElement): string => {
