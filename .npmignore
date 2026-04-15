@@ -1,6 +1,6 @@
 node_modules/
-dist/
 *.log
+AGENTS.md
 test-results/
 playwright-report/
 coverage/
