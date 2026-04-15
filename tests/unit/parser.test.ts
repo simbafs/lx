@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { JSDOM } from 'jsdom'
-import { evaluateMath, resolveValue, getVariable } from '../../src/parser'
+import { evaluateMath, resolveValue, getVariable, parseAspectExpr } from '../../src/parser'
 
 describe('evaluateMath', () => {
 	let document: Document
@@ -142,5 +142,56 @@ describe('getVariable', () => {
 	it('should throw on non-numeric variable value', () => {
 		child.setAttribute('data-lx-bad', 'not-a-number')
 		expect(() => getVariable(child, 'bad')).toThrow('[lx] Variable "bad" on')
+	})
+})
+
+describe('parseAspectExpr', () => {
+	let document: Document
+	let el: HTMLElement
+
+	beforeEach(() => {
+		const dom = new JSDOM('<!DOCTYPE html><html><body><div id="test"></div></body></html>')
+		document = dom.window.document
+		;(global as any).document = document
+		el = document.getElementById('test') as HTMLElement
+	})
+
+	it('should parse 16:9 aspect ratio', () => {
+		const result = parseAspectExpr('16:9', el)
+		expect(result.type).toBe('aspect')
+		expect(result.width).toBe(16)
+		expect(result.height).toBe(9)
+		expect(result.ratio).toBeCloseTo(16 / 9)
+		expect(result.raw).toBe('16:9')
+	})
+
+	it('should parse 1:1 aspect ratio', () => {
+		const result = parseAspectExpr('1:1', el)
+		expect(result.width).toBe(1)
+		expect(result.height).toBe(1)
+		expect(result.ratio).toBe(1)
+	})
+
+	it('should parse decimal aspect ratio', () => {
+		const result = parseAspectExpr('1.5:1', el)
+		expect(result.width).toBe(1.5)
+		expect(result.height).toBe(1)
+		expect(result.ratio).toBe(1.5)
+	})
+
+	it('should throw on zero width', () => {
+		expect(() => parseAspectExpr('0:9', el)).toThrow('[lx] Invalid lx-aspect')
+	})
+
+	it('should throw on zero height', () => {
+		expect(() => parseAspectExpr('16:0', el)).toThrow('[lx] Invalid lx-aspect')
+	})
+
+	it('should throw on invalid format', () => {
+		expect(() => parseAspectExpr('16/9', el)).toThrow('[lx] Invalid lx-aspect')
+	})
+
+	it('should throw on non-numeric values', () => {
+		expect(() => parseAspectExpr('a:b', el)).toThrow('[lx] Invalid lx-aspect')
 	})
 })

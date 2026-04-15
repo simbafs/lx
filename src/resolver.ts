@@ -69,20 +69,59 @@ export function resolveNode(node: CanonicalNode, nodes: Map<string, CanonicalNod
 		}
 	}
 
-	if (left !== undefined && right !== undefined) {
-		width = right - left
-	} else if (left !== undefined && width !== undefined) {
-		right = left + width
-	} else if (right !== undefined && width !== undefined) {
-		left = right - width
-	}
+	if (node.aspect) {
+		const horizontalCount = Number(left !== undefined) + Number(right !== undefined) + Number(width !== undefined)
+		const verticalCount = Number(top !== undefined) + Number(bottom !== undefined) + Number(height !== undefined)
 
-	if (top !== undefined && bottom !== undefined) {
-		height = bottom - top
-	} else if (top !== undefined && height !== undefined) {
-		bottom = top + height
-	} else if (bottom !== undefined && height !== undefined) {
-		top = bottom - height
+		if (horizontalCount === 2 && verticalCount === 1) {
+			if (left !== undefined && right !== undefined) {
+				width = right - left
+			}
+			height = width! / node.aspect.ratio
+			if (top !== undefined) {
+				bottom = top + height
+			} else if (bottom !== undefined) {
+				top = bottom - height
+			}
+		} else if (verticalCount === 2 && horizontalCount === 1) {
+			if (top !== undefined && bottom !== undefined) {
+				height = bottom - top
+			}
+			width = height! * node.aspect.ratio
+			if (left !== undefined) {
+				right = left + width
+			} else if (right !== undefined) {
+				left = right - width
+			}
+		}
+
+		if (left !== undefined && width !== undefined && right === undefined) {
+			right = left + width
+		} else if (right !== undefined && width !== undefined && left === undefined) {
+			left = right - width
+		}
+
+		if (top !== undefined && height !== undefined && bottom === undefined) {
+			bottom = top + height
+		} else if (bottom !== undefined && height !== undefined && top === undefined) {
+			top = bottom - height
+		}
+	} else {
+		if (left !== undefined && right !== undefined) {
+			width = right - left
+		} else if (left !== undefined && width !== undefined) {
+			right = left + width
+		} else if (right !== undefined && width !== undefined) {
+			left = right - width
+		}
+
+		if (top !== undefined && bottom !== undefined) {
+			height = bottom - top
+		} else if (top !== undefined && height !== undefined) {
+			bottom = top + height
+		} else if (bottom !== undefined && height !== undefined) {
+			top = bottom - height
+		}
 	}
 
 	if (
@@ -93,6 +132,7 @@ export function resolveNode(node: CanonicalNode, nodes: Map<string, CanonicalNod
 		width === undefined ||
 		height === undefined
 	) {
+		console.log({ left, right, top, bottom, width, height })
 		throw new Error(`[lx] Failed to resolve ${describeEl(node.el)}.`)
 	}
 
@@ -142,25 +182,39 @@ function cloneRect(rect: DOMRect): ResolvedBox {
 export function validateNodes(nodes: Map<string, CanonicalNode>): void {
 	for (const [, node] of nodes) {
 		const horizontalCount = Number(node.left !== null) + Number(node.right !== null) + Number(node.width !== null)
-
 		const verticalCount = Number(node.top !== null) + Number(node.bottom !== null) + Number(node.height !== null)
 
-		if (horizontalCount !== 2) {
-			throw new Error(
-				`[lx] ${describeEl(node.el)} must have exactly 2 horizontal constraints ` +
+		if (node.aspect) {
+			if (node.width?.type === 'range' || node.height?.type === 'range') {
+				throw new Error(`[lx] ${describeEl(node.el)} cannot use range size with lx-aspect.`)
+			}
+
+			const horizontalOnlyOne = horizontalCount === 1 && verticalCount === 2
+			const verticalOnlyOne = verticalCount === 1 && horizontalCount === 2
+
+			if (!horizontalOnlyOne && !verticalOnlyOne) {
+				throw new Error(
+					`[lx] ${describeEl(node.el)} with lx-aspect must have exactly 1 constraint in one dimension and 2 in the other.`,
+				)
+			}
+		} else {
+			if (horizontalCount !== 2) {
+				throw new Error(
+					`[lx] ${describeEl(node.el)} must have exactly 2 horizontal constraints ` +
 					`(lx-left, lx-right, lx-width).`,
-			)
-		}
+				)
+			}
 
-		if (verticalCount !== 2) {
-			throw new Error(
-				`[lx] ${describeEl(node.el)} must have exactly 2 vertical constraints ` +
+			if (verticalCount !== 2) {
+				throw new Error(
+					`[lx] ${describeEl(node.el)} must have exactly 2 vertical constraints ` +
 					`(lx-top, lx-bottom, lx-height).`,
-			)
-		}
+				)
+			}
 
-		if (node.width?.type === 'range' && node.height?.type === 'range') {
-			throw new Error(`[lx] ${describeEl(node.el)} cannot use range for both lx-width and lx-height.`)
+			if (node.width?.type === 'range' && node.height?.type === 'range') {
+				throw new Error(`[lx] ${describeEl(node.el)} cannot use range for both lx-width and lx-height.`)
+			}
 		}
 
 		const positionExprs: (PositionExpr | null)[] = [node.left, node.right, node.top, node.bottom]

@@ -6,6 +6,7 @@ import {
 	BodyPositionExpr,
 	FixedSizeExpr,
 	RangeSizeExpr,
+	AspectExpr,
 	SizeExpr,
 	PositionExpr,
 	PositionAttrName,
@@ -14,12 +15,14 @@ import {
 	RELATIVE_POSITION_RE,
 	FIXED_SIZE_RE,
 	RANGE_SIZE_RE,
+	ASPECT_RE,
 	EXPRESSION_RE,
 	POSITION_EXPR_RE,
 	VARIABLE_RE,
 	MATH_TOKEN_RE,
 	ATTR_ALIASES,
 	ALL_ATTRS,
+	ASPECT_ATTR,
 } from './types'
 
 export function describeEl(el: HTMLElement): string {
@@ -249,6 +252,7 @@ export function expandSugarToCanonical(
 		'lx-b': 'bottom',
 		'lx-w': 'width',
 		'lx-h': 'height',
+		'lx-a': 'aspect',
 	}
 
 	const positionEdges = ['left', 'right', 'top', 'bottom']
@@ -339,6 +343,11 @@ export function expandSugarToCanonical(
 					value: canonicalValue,
 					originalAttr: alias,
 				}
+			} else if (canonical === 'aspect') {
+				result.aspect = {
+					value,
+					originalAttr: alias,
+				}
 			} else {
 				if (RANGE_SIZE_RE.test(value)) {
 					const parts = value.split('/')
@@ -369,6 +378,11 @@ export function expandSugarToCanonical(
 				const canonicalValue = convertPositionToCanonical(value, edge as Edge, el)
 				result[edge as keyof CanonicalAttrMap] = {
 					value: canonicalValue,
+					originalAttr: attr,
+				}
+			} else if (edge === 'aspect') {
+				result.aspect = {
+					value,
 					originalAttr: attr,
 				}
 			} else {
@@ -463,6 +477,31 @@ export function parseSizeExpr(raw: string, attrName: SizeAttrName, el: HTMLEleme
 	throw new Error(`[lx] Invalid ${attrName}="${value}" on ${describeEl(el)}. ` + `Expected "300" or "200/500".`)
 }
 
+export function parseAspectExpr(raw: string, el: HTMLElement): AspectExpr {
+	const value = String(raw).trim()
+	const match = value.match(ASPECT_RE)
+
+	if (!match) {
+		throw new Error(`[lx] Invalid ${ASPECT_ATTR}="${value}" on ${describeEl(el)}. Expected "W:H" format (e.g., "16:9").`)
+	}
+
+	const w = Number(match[1])
+	const h = Number(match[2])
+
+	if (w <= 0 || h <= 0) {
+		throw new Error(`[lx] Invalid ${ASPECT_ATTR}="${value}" on ${describeEl(el)}: W and H must be positive numbers.`)
+	}
+
+	const expr: AspectExpr = {
+		type: 'aspect',
+		width: w,
+		height: h,
+		ratio: w / h,
+		raw: value,
+	}
+	return expr
+}
+
 export function collectNodes(root: ParentNode): { nodes: Map<string, CanonicalNode>; containerOrderedIds: Map<string, string[]> } {
 	const elements = Array.from(root.querySelectorAll('*')).filter(hasLxAttrs)
 
@@ -509,6 +548,7 @@ export function collectNodes(root: ParentNode): { nodes: Map<string, CanonicalNo
 			bottom: null,
 			width: null,
 			height: null,
+			aspect: null,
 			refs: new Set(),
 			resolved: null,
 			canonicalAttrs: {},
@@ -530,6 +570,7 @@ export function collectNodes(root: ParentNode): { nodes: Map<string, CanonicalNo
 		node.bottom = canonicalAttrs.bottom ? parsePositionExpr(canonicalAttrs.bottom.value, 'lx-bottom', el) : null
 		node.width = canonicalAttrs.width ? parseSizeExpr(canonicalAttrs.width.value, 'lx-width', el) : null
 		node.height = canonicalAttrs.height ? parseSizeExpr(canonicalAttrs.height.value, 'lx-height', el) : null
+		node.aspect = canonicalAttrs.aspect ? parseAspectExpr(canonicalAttrs.aspect.value, el) : null
 	}
 
 	return { nodes, containerOrderedIds }

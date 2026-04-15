@@ -61,6 +61,43 @@ test.describe('Layout positioning', () => {
 		expect(logoBox).not.toBeNull()
 		expect(Math.abs(logoBox!.y + logoBox!.height - (sidebarBox!.y + sidebarBox!.height))).toBeLessThanOrEqual(2)
 	})
+
+	test('should resolve height correctly using lx-aspect (16:9)', async ({ page }) => {
+		await page.evaluate(() => {
+			const el = document.createElement('div')
+			el.id = 'aspect-test'
+			el.setAttribute('lx', '')
+			el.setAttribute('lx-t', '0')
+			el.setAttribute('lx-l', '0')
+			el.setAttribute('lx-w', '400')
+			el.setAttribute('lx-a', '16:9')
+			document.body.appendChild(el)
+			;(window as any).lx.setup()
+		})
+
+		const box = await page.locator('#aspect-test').boundingBox()
+		expect(box).not.toBeNull()
+		expect(box!.width).toBeCloseTo(400, 0)
+		expect(box!.height).toBeCloseTo(225, 0)
+	})
+
+	test('should resolve width correctly using lx-aspect with vertical dominant (vertical 2 + horizontal 1 + aspect)', async ({ page }) => {
+		await page.evaluate(() => {
+			const el = document.createElement('div')
+			el.id = 'aspect-v-test'
+			el.setAttribute('lx', '')
+			el.setAttribute('lx-t', '0')
+			el.setAttribute('lx-b', '0')
+			el.setAttribute('lx-l', '0')
+			el.setAttribute('lx-a', '1:1')
+			document.body.appendChild(el)
+			;(window as any).lx.setup()
+		})
+
+		const box = await page.locator('#aspect-v-test').boundingBox()
+		expect(box).not.toBeNull()
+		expect(box!.height).toBeCloseTo(box!.width, 0)
+	})
 })
 
 test.describe('Dynamic updates', () => {
@@ -127,7 +164,7 @@ test.describe('Dynamic updates', () => {
 test.describe('Error handling', () => {
 	test('should handle undefined variable gracefully', async ({ page }) => {
 		const errors: string[] = []
-		page.on('console', (msg) => {
+		page.on('console', msg => {
 			if (msg.type() === 'error') {
 				errors.push(msg.text())
 			}
@@ -137,7 +174,7 @@ test.describe('Error handling', () => {
 		await page.waitForFunction(() => (window as any).lx !== undefined)
 		await page.waitForTimeout(100)
 
-		const hasLxError = errors.some((e) => e.includes('[lx]'))
+		const hasLxError = errors.some(e => e.includes('[lx]'))
 		expect(hasLxError).toBe(false)
 	})
 
@@ -175,5 +212,38 @@ test.describe('Error handling', () => {
 
 		const cycleDetected = await page.evaluate(() => (window as any).cycleDetected === true)
 		expect(cycleDetected).toBe(true)
+	})
+
+	test('should fail when lx-aspect and range size coexist', async ({ page }) => {
+		await page.goto('/test.html')
+		await page.waitForFunction(() => (window as any).lx !== undefined)
+
+		const errors: string[] = []
+		page.on('console', msg => {
+			if (msg.type() === 'error') {
+				errors.push(msg.text())
+			}
+		})
+
+		const caughtError = await page.evaluate(() => {
+			const el = document.createElement('div')
+			el.id = 'conflict-test'
+			el.setAttribute('lx-t', '0')
+			el.setAttribute('lx-l', '0')
+			el.setAttribute('lx-r', '0')
+			el.setAttribute('lx-h', '200/500')
+			el.setAttribute('lx-a', '1:1')
+			document.body.appendChild(el)
+			try {
+				;(window as any).lx.setup()
+			} catch (e: any) {
+				return e.message || String(e)
+			}
+			return null
+		})
+
+		expect(caughtError).not.toBeNull()
+		expect(caughtError).toContain('range')
+		expect(caughtError).toContain('aspect')
 	})
 })

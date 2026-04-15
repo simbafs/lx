@@ -35,16 +35,16 @@
 			#controls input[type="range"] {
 				width: 150px;
 			}
-			div:not(#controls) {
-				background-color: rgba(255, 180, 0, 0.08);
-				border: 1px dashed rgba(0, 0, 0, 0.25);
-				display: grid;
-				place-items: center;
-				font-size: 4rem;
-				font-family: sans-serif;
-				box-sizing: border-box;
-				overflow: hidden;
-			}
+		div:not(#controls) {
+			background-color: rgba(255, 180, 0, 0.08);
+			border: 1px dashed rgba(0, 0, 0, 0.25);
+			display: grid;
+			place-items: center;
+			font-size: 4rem;
+			font-family: sans-serif;
+			box-sizing: border-box;
+			overflow: hidden;
+		}
 		</style>
 	</head>
 	<body data-lx-gap="25" data-lx-scale="0.8">
@@ -60,7 +60,7 @@
 		</div>
 
 		<div id="screen" lx lx-l="0" lx-t="0" lx-w="1920" lx-h="1080">
-			<div id="main" lx-l="50" lx-t="50" lx-w="(1920*{scale})" lx-h="(1080*{scale})">main</div>
+			<div id="main" lx-l="50" lx-t="50" lx-h="(1080*{scale})" lx-a="16:9">main</div>
 
 			<div id="sidebar" lx lx-l="#main.right+({gap})" lx-r="#screen.right-50" lx-t="50" lx-h="(1080*{scale})">
 				<div id="info" lx-l="#sidebar.left+0" lx-r="0" lx-t="0" lx-h="200/500">info</div>

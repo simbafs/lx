@@ -4,6 +4,7 @@
   "description": "HTML attribute DSL for absolute positioning",
   "main": "dist/index.min.js",
   "scripts": {
+    "clean": "rm -rf dist test-results playwright-report",
     "build": "node build.mjs",
     "dev": "node build.mjs --watch",
     "test:unit": "vitest run",

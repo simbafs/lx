@@ -48,6 +48,7 @@
 
   left/right/top/bottom: PositionExpr | null
   width/height: SizeExpr | null
+  aspect: AspectExpr | null
 
   refs: Set<string>
   resolved: ResolvedBox | null
@@ -69,6 +70,12 @@
 { type: 'range', min: number, max: number, raw }
 ```
 
+### AspectExpr
+
+```typescript
+{ type: 'aspect', width: number, height: number, ratio: number, raw }
+```
+
 ---
 
 ## 3. Parsing
@@ -82,6 +89,7 @@
 | `POSITION_EXPR_RE` | `/^(body\|#(...))\\.(...)([+-])(\\(.+\\))$/` |
 | `FIXED_SIZE_RE` | `/^-?\\d+(?:\\.\\d+)?$/` |
 | `RANGE_SIZE_RE` | `/^(-?\\d+(?:\\.\\d+)?)\\/(-?\\d+(?:\\.\\d+)?)$/` |
+| `ASPECT_RE` | `/^(\\d+(?:\\.\\d+)?):(\\d+(?:\\.\\d+)?)$/` |
 | `EXPRESSION_RE` | `/^\\(([^()]+)\\)$/` |
 | `VARIABLE_RE` | `/^\\{([A-Za-z_][\\w]*)\\}$/` |
 | `MATH_TOKEN_RE` | `/(-?\\d+(?:\\.\\d+)?\|\\{[^}]+\}\|[+\\-*/])/` |
@@ -127,9 +135,15 @@
 
 ### Constraint 檢查
 
-每個元素：
+每個元素支援兩種約束組合：
+
+**標準組合（無 aspect）**：
 - 水平：left/right/width 必須 2 個
 - 垂直：top/bottom/height 必須 2 個
+
+**Aspect 組合**：
+- 水平主動（Horizontal Dominant）：水平 2 個 + 垂直 1 個 + aspect
+- 垂直主動（Vertical Dominant）：垂直 2 個 + 水平 1 個 + aspect
 
 ### 其他檢查
 
@@ -137,6 +151,7 @@
 - ref 必須存在
 - 不可循環依賴
 - 不允許 width + height 同時為 range
+- aspect 不可與 range size 共存
 
 ---
 
@@ -181,6 +196,15 @@
 - left + right → width
 - left + width → right
 - right + width → left
+
+### Aspect Ratio
+
+當存在 `aspect` 時：
+1. 計算主動維度（具有 2 個約束的軸）
+2. 由主動維度計算被動維度：
+   - 水平主動：`height = width / aspect.ratio`
+   - 垂直主動：`width = height * aspect.ratio`
+3. 由計算出的尺寸與現有的 1 個位置約束，計算另一個座標點
 
 ---
 

@@ -1,21 +1,37 @@
 import { describe, it, expect } from 'vitest'
-import type { CanonicalNode } from '../../src/types'
-import { detectCycles, topologicalSort } from '../../src/resolver'
+import type { CanonicalNode, FixedSizeExpr, AspectExpr } from '../../src/types'
+import { detectCycles, topologicalSort, validateNodes } from '../../src/resolver'
+
+function createMockEl(id: string): HTMLElement {
+	return {
+		id,
+		tagName: 'DIV',
+	} as unknown as HTMLElement
+}
 
 function createMockNode(id: string, refs: Set<string> = new Set()): CanonicalNode {
 	return {
 		id,
-		el: null as any,
+		el: createMockEl(id),
 		left: null,
 		right: null,
 		top: null,
 		bottom: null,
 		width: null,
 		height: null,
+		aspect: null,
 		refs,
 		resolved: null,
 		canonicalAttrs: {},
 	}
+}
+
+function createFixedWidth(width: number): FixedSizeExpr {
+	return { type: 'fixed', value: width, raw: String(width) }
+}
+
+function createAspect(w: number, h: number): AspectExpr {
+	return { type: 'aspect', width: w, height: h, ratio: w / h, raw: `${w}:${h}` }
 }
 
 describe('topologicalSort', () => {
@@ -30,7 +46,7 @@ describe('topologicalSort', () => {
 		nodes.set('c', c)
 
 		const sorted = topologicalSort(nodes)
-		const ids = sorted.map((n) => n.id)
+		const ids = sorted.map(n => n.id)
 
 		expect(ids.indexOf('a')).toBeLessThan(ids.indexOf('b'))
 		expect(ids.indexOf('b')).toBeLessThan(ids.indexOf('c'))
@@ -47,7 +63,7 @@ describe('topologicalSort', () => {
 		nodes.set('c', c)
 
 		const sorted = topologicalSort(nodes)
-		const ids = sorted.map((n) => n.id)
+		const ids = sorted.map(n => n.id)
 
 		expect(ids.indexOf('a')).toBeLessThan(ids.indexOf('c'))
 		expect(ids.indexOf('b')).toBeLessThan(ids.indexOf('c'))
@@ -66,7 +82,7 @@ describe('topologicalSort', () => {
 		nodes.set('d', d)
 
 		const sorted = topologicalSort(nodes)
-		const ids = sorted.map((n) => n.id)
+		const ids = sorted.map(n => n.id)
 
 		expect(ids.indexOf('a')).toBeLessThan(ids.indexOf('b'))
 		expect(ids.indexOf('a')).toBeLessThan(ids.indexOf('c'))
@@ -85,7 +101,7 @@ describe('topologicalSort', () => {
 		nodes.set('c', c)
 
 		const sorted = topologicalSort(nodes)
-		const ids = sorted.map((n) => n.id)
+		const ids = sorted.map(n => n.id)
 
 		expect(ids.indexOf('a')).toBeLessThan(ids.indexOf('c'))
 		expect(ids).toContain('a')
@@ -101,7 +117,7 @@ describe('topologicalSort', () => {
 
 		const sorted = topologicalSort(nodes)
 		expect(sorted).toHaveLength(3)
-		expect(sorted.map((n) => n.id)).toEqual(['z', 'y', 'x'])
+		expect(sorted.map(n => n.id)).toEqual(['z', 'y', 'x'])
 	})
 })
 
@@ -176,5 +192,81 @@ describe('detectCycles', () => {
 		nodes.set('b', b)
 
 		expect(() => detectCycles(nodes)).toThrow('#a -> #b -> #a')
+	})
+})
+
+describe('validateNodes with aspect', () => {
+	it('should allow horizontal dominant aspect (2 horizontal + 1 vertical + aspect)', () => {
+		const nodes = new Map<string, CanonicalNode>()
+		const node = createMockNode('box')
+		node.left = { type: 'body-ref', edge: 'left', offset: 0, raw: 'body.left+0' }
+		node.right = { type: 'body-ref', edge: 'right', offset: 0, raw: 'body.right+0' }
+		node.top = { type: 'body-ref', edge: 'top', offset: 0, raw: 'body.top+0' }
+		node.aspect = createAspect(16, 9)
+		nodes.set('box', node)
+
+		expect(() => validateNodes(nodes)).not.toThrow()
+	})
+
+	it('should allow vertical dominant aspect (2 vertical + 1 horizontal + aspect)', () => {
+		const nodes = new Map<string, CanonicalNode>()
+		const node = createMockNode('box')
+		node.top = { type: 'body-ref', edge: 'top', offset: 0, raw: 'body.top+0' }
+		node.bottom = { type: 'body-ref', edge: 'bottom', offset: 0, raw: 'body.bottom+0' }
+		node.left = { type: 'body-ref', edge: 'left', offset: 0, raw: 'body.left+0' }
+		node.aspect = createAspect(16, 9)
+		nodes.set('box', node)
+
+		expect(() => validateNodes(nodes)).not.toThrow()
+	})
+
+	it('should throw when aspect coexists with range width', () => {
+		const nodes = new Map<string, CanonicalNode>()
+		const node = createMockNode('box')
+		node.left = { type: 'body-ref', edge: 'left', offset: 0, raw: 'body.left+0' }
+		node.right = { type: 'body-ref', edge: 'right', offset: 0, raw: 'body.right+0' }
+		node.top = { type: 'body-ref', edge: 'top', offset: 0, raw: 'body.top+0' }
+		node.width = { type: 'range', min: 100, max: 200, raw: '100/200' }
+		node.aspect = createAspect(16, 9)
+		nodes.set('box', node)
+
+		expect(() => validateNodes(nodes)).toThrow('cannot use range size with lx-aspect')
+	})
+
+	it('should throw when aspect coexists with range height', () => {
+		const nodes = new Map<string, CanonicalNode>()
+		const node = createMockNode('box')
+		node.left = { type: 'body-ref', edge: 'left', offset: 0, raw: 'body.left+0' }
+		node.right = { type: 'body-ref', edge: 'right', offset: 0, raw: 'body.right+0' }
+		node.top = { type: 'body-ref', edge: 'top', offset: 0, raw: 'body.top+0' }
+		node.height = { type: 'range', min: 100, max: 200, raw: '100/200' }
+		node.aspect = createAspect(16, 9)
+		nodes.set('box', node)
+
+		expect(() => validateNodes(nodes)).toThrow('cannot use range size with lx-aspect')
+	})
+
+	it('should throw when aspect with insufficient constraints', () => {
+		const nodes = new Map<string, CanonicalNode>()
+		const node = createMockNode('box')
+		node.left = { type: 'body-ref', edge: 'left', offset: 0, raw: 'body.left+0' }
+		node.right = { type: 'body-ref', edge: 'right', offset: 0, raw: 'body.right+0' }
+		node.aspect = createAspect(16, 9)
+		nodes.set('box', node)
+
+		expect(() => validateNodes(nodes)).toThrow('with lx-aspect must have exactly 1 constraint in one dimension')
+	})
+
+	it('should throw when aspect with 2+2 constraints (over-constrained)', () => {
+		const nodes = new Map<string, CanonicalNode>()
+		const node = createMockNode('box')
+		node.left = { type: 'body-ref', edge: 'left', offset: 0, raw: 'body.left+0' }
+		node.right = { type: 'body-ref', edge: 'right', offset: 0, raw: 'body.right+0' }
+		node.top = { type: 'body-ref', edge: 'top', offset: 0, raw: 'body.top+0' }
+		node.bottom = { type: 'body-ref', edge: 'bottom', offset: 0, raw: 'body.bottom+0' }
+		node.aspect = createAspect(16, 9)
+		nodes.set('box', node)
+
+		expect(() => validateNodes(nodes)).toThrow('with lx-aspect must have exactly 1 constraint in one dimension')
 	})
 })

@@ -104,31 +104,78 @@ lx-width="300" lx-height="200/500"
 
 ---
 
+## 2.3 Aspect Ratio Attribute
+
+### 屬性
+
+- lx-aspect
+
+### 語法
+
+    <width>:<height>
+
+### 語意
+
+定義元素的寬高比 ($R = W/H$)。
+
+- `width` 與 `height` 必須為正數
+- 不可為零（如 `16:0` 為非法）
+
+### 範例
+
+```html
+lx-aspect="16:9"
+lx-aspect="1:1"
+lx-aspect="4:3"
+```
+
+---
+
 # 3. Constraint Rules
 
-## 3.1 每個維度必須有 2 個 constraint
+## 3.1 約束組合
 
-### 水平（X）
+引入 `lx-aspect` 後，系統支援三種合法約束組合：
 
-- lx-left
-- lx-right
-- lx-width
+### 組合 A：標準獨立約束（無 Aspect）
 
-→ 必須剛好 2 個
+- **水平**：從 `lx-left`, `lx-right`, `lx-width` 中選 2 個
+- **垂直**：從 `lx-top`, `lx-bottom`, `lx-height` 中選 2 個
 
-### 垂直（Y）
+### 組合 B：由寬推高（Aspect + Horizontal Dominant）
 
-- lx-top
-- lx-bottom
-- lx-height
+- **水平**：選 2 個（決定寬度）
+- **垂直**：選 1 個（決定起始點，如 `lx-top` 或 `lx-bottom`）
+- **比例**：`lx-aspect`（由寬度計算高度）
 
-→ 必須剛好 2 個
+### 組合 C：由高推寬（Aspect + Vertical Dominant）
+
+- **垂直**：選 2 個（決定高度）
+- **水平**：選 1 個（決定起始點，如 `lx-left` 或 `lx-right`）
+- **比例**：`lx-aspect`（由高度計算寬度）
 
 ---
 
 ## 3.2 限制
 
-- width 與 height 不能同時為 range
+### 硬性限制（Hard Fail）
+
+1. **禁止與 Range Size 共存**
+   - `lx-aspect` 不可與任何範圍尺寸（如 `200/500`）同時出現在同一元素上
+   - 原因：避免循環渲染震盪
+
+2. **禁止過度約束**
+   - 若同時擁有「水平 2 約束」與「垂直 2 約束」卻又標註 `lx-aspect`，拋出錯誤
+
+3. **禁止約束不足**
+   - 若使用 `lx-aspect` 但其中一個維度沒有任何位置參考，拋出錯誤
+
+4. **格式錯誤**
+   - `W:H` 中 `W` 或 `H` 必須為正數且不得為零
+
+### 其他限制
+
+- 當無 `lx-aspect` 時：width 與 height 不能同時為 range
 - 所有元素必須有 id
 - 不允許循環依賴
 
@@ -154,14 +201,15 @@ Sugar 是語法簡化，必須可轉換為 canonical。
 
 ## 5.1 Attribute Alias
 
-| Sugar | Canonical |
-|-------|-----------|
-| lx-l  | lx-left   |
-| lx-r  | lx-right  |
-| lx-t  | lx-top    |
-| lx-b  | lx-bottom |
-| lx-w  | lx-width  |
-| lx-h  | lx-height |
+| Sugar | Canonical  |
+|-------|------------|
+| lx-l  | lx-left    |
+| lx-r  | lx-right   |
+| lx-t  | lx-top     |
+| lx-b  | lx-bottom  |
+| lx-w  | lx-width   |
+| lx-h  | lx-height  |
+| lx-a  | lx-aspect  |
 
 ---
 

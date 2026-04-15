@@ -52,6 +52,25 @@ Supports `lx-width` (`lx-w`) and `lx-height` (`lx-h`).
 - **Range Size**: Use `min/max` syntax (e.g., `200/500`). The element grows based on content while staying within these limits.
 - **Expression**: Use `(expression)` syntax (e.g., `({base}*2)`).
 
+### 3. Aspect Ratio
+
+Supports `lx-aspect` (`lx-a`) to define width-to-height ratio.
+
+```html
+<div id="video" lx-t="0" lx-l="0" lx-w="320" lx-a="16:9"></div>
+```
+
+This creates a video element with fixed width 320px and height calculated as `320 / (16/9) = 180px`.
+
+**Constraint Rules**: With `lx-aspect`, each dimension needs only one position reference plus the aspect ratio:
+
+- **Horizontal Dominant**: 2 horizontal constraints + 1 vertical reference + aspect
+- **Vertical Dominant**: 2 vertical constraints + 1 horizontal reference + aspect
+
+**Restrictions**:
+- Cannot coexist with range sizes (e.g., `200/500`)
+- Both `W` and `H` must be positive numbers
+
 ### 3. Variables & Math
 
 Define reusable values with `data-lx-*` attributes and use them in expressions:
@@ -81,10 +100,14 @@ Define reusable values with `data-lx-*` attributes and use them in expressions:
 
 ### 4. Constraint Rules
 
-To ensure a unique solution, each element must provide exactly **two** constraints for each dimension (horizontal and vertical):
+To ensure a unique solution, each element must satisfy one of these valid combinations:
 
-- **Horizontal**: Choose two from `left`, `right`, and `width`.
-- **Vertical**: Choose two from `top`, `bottom`, and `height`.
+- **Standard (no aspect)**: Two constraints per dimension
+  - Horizontal: two from `left`, `right`, `width`
+  - Vertical: two from `top`, `bottom`, `height`
+- **With aspect ratio (`lx-a`)**: Cross-dimensional constraint
+  - Horizontal dominant: 2 horizontal + 1 vertical + aspect
+  - Vertical dominant: 2 vertical + 1 horizontal + aspect
 
 ## Execution Mechanism
 
