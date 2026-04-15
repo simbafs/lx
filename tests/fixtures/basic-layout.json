@@ -1,0 +1,44 @@
+{
+  "#screen": {
+    "left": 0,
+    "top": 0,
+    "width": 1920,
+    "height": 1080
+  },
+  "#main": {
+    "left": 50,
+    "top": 50,
+    "width": 1536,
+    "height": 864
+  },
+  "#sidebar": {
+    "left": 1634,
+    "top": 50,
+    "width": 236,
+    "height": 864
+  },
+  "#info": {
+    "left": 1634,
+    "top": 50,
+    "width": 236,
+    "height": 200
+  },
+  "#qa": {
+    "left": 1634,
+    "top": 275,
+    "width": 236,
+    "height": 100
+  },
+  "#logo": {
+    "left": 1634,
+    "top": 400,
+    "width": 236,
+    "height": 514
+  },
+  "#ad": {
+    "left": 50,
+    "top": 939,
+    "width": 1820,
+    "height": 91
+  }
+}
