@@ -90,6 +90,10 @@ lx-left="body.left+0" lx-top="#main.bottom+20" lx-right="#screen.right-50"
 
     <min>/<max>
 
+#### 表達式尺寸
+
+    (<expression>)
+
 ---
 
 ### 範例
@@ -150,16 +154,14 @@ Sugar 是語法簡化，必須可轉換為 canonical。
 
 ## 5.1 Attribute Alias
 
-Sugar Canonical
-
----
-
-lx-l lx-left
-lx-r lx-right
-lx-t lx-top
-lx-b lx-bottom
-lx-w lx-width
-lx-h lx-height
+| Sugar | Canonical |
+|-------|-----------|
+| lx-l  | lx-left   |
+| lx-r  | lx-right  |
+| lx-t  | lx-top    |
+| lx-b  | lx-bottom |
+| lx-w  | lx-width  |
+| lx-h  | lx-height |
 
 ---
 
@@ -190,19 +192,7 @@ lx-h lx-height
 
 ---
 
-## 5.4 Override Container
-
-```html
-<span lx="body"></span>
-```
-
-語意：
-
-- 將 reference 強制設為 body
-
----
-
-## 5.5 Implicit Reference
+## 5.4 Implicit Reference
 
 若 position 未指定 ref：
 
@@ -218,7 +208,7 @@ lx-h lx-height
 
 ---
 
-## 5.6 Relative Selectors (previous / next)
+## 5.5 Relative Selectors (previous / next)
 
 ### 語法
 
@@ -261,7 +251,7 @@ lx-h lx-height
 
 ---
 
-## 5.7 Arithmetic Expressions
+## 5.6 Arithmetic Expressions
 
 ### 語法
 
@@ -277,11 +267,13 @@ lx-h lx-height
 
 #### 表達式
 
-    {variable}         變數引用
-    100+50            加法
-    {gap}*2           乘法
-    ({base}/2)        除法（需括號）
-    100-{offset}      減法
+| 格式           | 說明     |
+|----------------|----------|
+| `{variable}`   | 變數引用 |
+| `100+50`       | 加法     |
+| `{gap}*2`      | 乘法     |
+| `({base}/2)`   | 除法     |
+| `100-{offset}` | 減法     |
 
 ### 語意
 
@@ -298,7 +290,7 @@ lx-h lx-height
 
 ---
 
-## 5.8 Variable Scope
+## 5.7 Variable Scope
 
 ### 語法
 
