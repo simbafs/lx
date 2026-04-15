@@ -2,19 +2,29 @@
   "name": "lx",
   "version": "1.0.0",
   "description": "HTML attribute DSL for absolute positioning",
-  "main": "dist/lx.js",
+  "main": "dist/index.min.js",
   "scripts": {
     "build": "node build.mjs",
     "dev": "node build.mjs --watch"
   },
-  "keywords": ["layout", "positioning", "css", "html", "attributes"],
+  "keywords": [
+    "layout",
+    "positioning",
+    "css",
+    "html",
+    "attributes"
+  ],
   "author": "",
   "license": "MIT",
   "packageManager": "pnpm@10.33.0",
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   },
   "devDependencies": {
-    "esbuild": "^0.28.0"
+    "@types/node": "^25.6.0",
+    "esbuild": "^0.28.0",
+    "typescript": "^6.0.2"
   }
 }

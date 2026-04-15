@@ -16,8 +16,8 @@
 在 HTML 中依序引入核心引擎與自動化模組：
 
 ```html
-<script src="lx.js"></script>
-<script src="lx-auto.js"></script>
+<script src="dist/index.min.js"></script>
+<script src="dist/auto.min.js"></script>
 ```
 
 ### 基礎範例

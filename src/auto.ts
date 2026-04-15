@@ -1,25 +1,14 @@
-/**
- * @file lx-auto.js
- * @description Automatic redraw for lx. Handles resize events, range size changes,
- * and DOM mutations with minimal performance overhead.
- */
-
-/** @type {boolean} */
 let rafPending = false
 
-/** @type {boolean} */
 let updateInProgress = false
 
-/** @type {ResizeObserver | null} */
-let resizeObserver = null
+let resizeObserver: ResizeObserver | null = null
 
-/** @type {MutationObserver | null} */
-let mutationObserver = null
+let mutationObserver: MutationObserver | null = null
 
-/** @type {Set<Element>} */
-const rangeSizeElements = new Set()
+const rangeSizeElements = new Set<Element>()
 
-function requestRelayout(reason = 'trigger') {
+function requestRelayout(reason = 'trigger'): void {
 	if (rafPending || updateInProgress) return
 	rafPending = true
 	requestAnimationFrame(() => {
@@ -37,7 +26,7 @@ function requestRelayout(reason = 'trigger') {
 	})
 }
 
-function scanForRangeSizeElements(root = document.body) {
+function scanForRangeSizeElements(root: ParentNode = document.body): void {
 	const elements = root.querySelectorAll('*')
 	for (const el of elements) {
 		if (!(el instanceof HTMLElement)) continue
@@ -53,11 +42,11 @@ function scanForRangeSizeElements(root = document.body) {
 	}
 }
 
-function handleWindowResize() {
+function handleWindowResize(): void {
 	requestRelayout('resize')
 }
 
-function handleRangeSizeChange(entries) {
+function handleRangeSizeChange(entries: ResizeObserverEntry[]): void {
 	let shouldUpdate = false
 	for (const entry of entries) {
 		if (entry.target instanceof HTMLElement) {
@@ -78,7 +67,7 @@ function handleRangeSizeChange(entries) {
 	}
 }
 
-function handleMutations(mutations) {
+function handleMutations(mutations: MutationRecord[]): void {
 	if (updateInProgress) return
 	if (rafPending) return
 
@@ -94,7 +83,7 @@ function handleMutations(mutations) {
 				type: mutation.type,
 				target: mutation.target,
 				added: mutation.addedNodes,
-				attr: mutation.attributeName
+				attr: mutation.attributeName,
 			})
 		}
 
@@ -133,6 +122,7 @@ function handleMutations(mutations) {
 
 		if (mutation.type === 'attributes') {
 			const attr = mutation.attributeName
+			if (attr === undefined || attr === null) continue
 			if (attr === 'style' || attr === 'class') continue
 			if (attr.startsWith('data-lx-')) {
 				needsSetup = true
@@ -155,7 +145,7 @@ function handleMutations(mutations) {
 	}
 }
 
-function initAuto() {
+export function initAuto(): void {
 	if (typeof window.lx === 'undefined') {
 		console.warn('%c[lx-auto] lx not found. Make sure lx.js is loaded first.', 'color:#e74c3c;font-weight:bold;')
 		return
@@ -180,7 +170,7 @@ function initAuto() {
 	})
 }
 
-function destroyAuto() {
+export function destroyAuto(): void {
 	window.removeEventListener('resize', handleWindowResize)
 
 	if (resizeObserver) {
@@ -198,14 +188,16 @@ function destroyAuto() {
 	updateInProgress = false
 }
 
-if (document.readyState === 'loading') {
-	document.addEventListener('DOMContentLoaded', initAuto)
-} else {
-	initAuto()
-}
+if (typeof window !== 'undefined') {
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initAuto)
+	} else {
+		initAuto()
+	}
 
-window.lxAuto = {
-	requestRelayout,
-	scanForRangeSizeElements,
-	destroy: destroyAuto,
+	window.lxAuto = {
+		requestRelayout: () => requestRelayout(),
+		scanForRangeSizeElements: () => scanForRangeSizeElements(),
+		destroy: destroyAuto,
+	}
 }

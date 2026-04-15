@@ -16,8 +16,8 @@
 Include the core engine and the automation module in your HTML:
 
 ```html
-<script src="lx.js"></script>
-<script src="lx-auto.js"></script>
+<script src="dist/index.min.js"></script>
+<script src="dist/auto.min.js"></script>
 ```
 
 ### Basic Example
