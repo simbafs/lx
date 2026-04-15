@@ -18,6 +18,7 @@
     "html",
     "attributes"
   ],
+  "repository": "github:simbafs/lx",
   "author": "",
   "license": "MIT",
   "packageManager": "pnpm@10.33.0",

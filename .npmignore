@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.log
+test-results/
+playwright-report/
+coverage/
+agents/
+test/
+*.spec.ts
+vitest.config.ts
+playwright.config.ts
+test.html
+tsconfig.json
+build.mjs
