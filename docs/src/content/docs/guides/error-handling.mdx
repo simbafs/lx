@@ -1,0 +1,297 @@
+---
+title: Error Handling
+description: Common errors and how to fix them
+---
+
+## Debug Mode
+
+Enable debug mode to see detailed error information:
+
+```html
+<script src="lx-auto.min.js"></script>
+<!-- Open http://example.com/?lx-debug -->
+```
+
+Debug output includes:
+- Parsed nodes table
+- Dependency order
+- Resolved coordinates
+- Applied CSS
+
+## Common Errors
+
+### Missing ID
+
+**Error**: `Element must have an id`
+
+**Cause**: Elements with `lx-*` attributes must have an `id`.
+
+**Fix**: Add an `id` attribute:
+
+```html
+<!-- Wrong -->
+<div lx-t="0" lx-l="0" lx-w="100" lx-h="100"></div>
+
+<!-- Correct -->
+<div
+  id="box"
+  lx-l="0"
+  lx-w="100"
+  lx-t="0"
+  lx-h="100"
+></div>
+```
+
+### Circular Dependency
+
+**Error**: `Circular dependency detected: #a -> #b -> #c -> #a`
+
+**Cause**: Elements cannot reference each other in a loop.
+
+**Fix**: Break the cycle by removing one reference:
+
+```html
+<!-- Wrong -->
+<div id="a" lx-t="0" lx-l="0" lx-w="100" lx-h="50"></div>
+<div id="b" lx-t="#a.bottom+10" lx-l="0" lx-w="100" lx-h="#a.height+20"></div>
+<div id="c" lx-t="#b.bottom+10" lx-l="0" lx-w="100" lx-h="#c.height+30"></div>
+
+<!-- Correct -->
+<div id="a" lx-l="0" lx-w="100" lx-t="0" lx-h="50"></div>
+<div id="b" lx-l="0" lx-w="100" lx-t="previous.bottom+10" lx-h="70"></div>
+<div id="c" lx-l="0" lx-w="100" lx-t="previous.bottom+10" lx-h="80"></div>
+```
+
+### Insufficient Constraints
+
+**Error**: `Insufficient constraints for element #box`
+
+**Cause**: Element doesn't have enough information to determine position or size.
+
+**Fix**: Add more constraints:
+
+```html
+<!-- Wrong: Only top and left specified -->
+<div id="box" lx-t="0" lx-l="0"></div>
+
+<!-- Correct: Two constraints per axis -->
+<div
+  id="box"
+  lx-l="0"
+  lx-w="100"
+  lx-t="0"
+  lx-h="100"
+></div>
+```
+
+### Over-constrained
+
+**Error**: `Over-constrained element #box`
+
+**Cause**: Element has too many constraints (more than 2 per axis without aspect).
+
+**Fix**: Remove redundant constraints:
+
+```html
+<!-- Wrong: 3 horizontal constraints (left, right, width) without aspect -->
+<div id="box" lx-l="0" lx-r="0" lx-w="100"></div>
+
+<!-- Correct: Only 2 horizontal constraints -->
+<div
+  id="box"
+  lx-l="0"
+  lx-w="100"
+></div>
+```
+
+### Aspect with Range Size
+
+**Error**: `Aspect ratio cannot be used with range size`
+
+**Cause**: `lx-aspect` cannot coexist with range size expressions like `200/500`.
+
+**Fix**: Use either aspect ratio OR range size, not both:
+
+```html
+<!-- Wrong -->
+<div
+  id="box"
+  lx-l="0"
+  lx-w="200/400"
+  lx-t="0"
+  lx-aspect="16:9"
+></div>
+
+<!-- Correct: Use aspect ratio -->
+<div
+  id="box"
+  lx-l="0"
+  lx-w="200"
+  lx-t="0"
+  lx-aspect="16:9"
+></div>
+
+<!-- Correct: Use range size without aspect -->
+<div
+  id="box"
+  lx-l="0"
+  lx-w="200/400"
+  lx-t="0"
+  lx-h="150"
+></div>
+```
+
+### Invalid Aspect Ratio
+
+**Error**: `Invalid aspect ratio format`
+
+**Cause**: Aspect ratio must be in `width:height` format with positive numbers.
+
+**Fix**:
+
+```html
+<!-- Wrong -->
+<div id="box" lx-a="16:0"></div>
+<div id="box" lx-a="16"></div>
+<div id="box" lx-a="0:9"></div>
+
+<!-- Correct -->
+<div id="box" lx-a="16:9"></div>
+```
+
+### Undefined Variable
+
+**Error**: `Undefined variable: gap`
+
+**Cause**: Referenced variable not defined in `data-lx-*` attributes.
+
+**Fix**: Define the variable on an ancestor element:
+
+```html
+<!-- Wrong -->
+<div
+  id="box"
+  lx-l="0"
+  lx-w="100"
+  lx-t="({gap})"
+  lx-h="100"
+></div>
+
+<!-- Correct -->
+<div id="container" lx data-lx-gap="20">
+  <div
+    id="box"
+    lx-l="0"
+    lx-w="100"
+    lx-t="({gap})"
+    lx-h="100"
+  ></div>
+</div>
+```
+
+### Division by Zero
+
+**Error**: `Division by zero in expression`
+
+**Cause**: Expression contains division by zero.
+
+**Fix**: Ensure divisor is never zero:
+
+```html
+<!-- Wrong -->
+<div
+  id="box"
+  lx-w="100"
+  lx-h="({width}/0)"
+></div>
+
+<!-- Correct -->
+<div
+  id="box"
+  lx-w="100"
+  lx-h="({width}/2)"
+></div>
+```
+
+### previous/next on Boundary
+
+**Error**: `Cannot use 'previous' on first element in container`
+
+**Cause**: First element in container uses `previous` keyword with no preceding element.
+
+**Fix**: Use explicit positioning for the first element:
+
+```html
+<!-- Wrong -->
+<div id="container" lx>
+  <div
+    id="first"
+    lx-l="0"
+    lx-w="100"
+    lx-t="previous.bottom+10"
+    lx-h="50"
+  ></div>
+</div>
+
+<!-- Correct -->
+<div id="container" lx>
+  <div
+    id="first"
+    lx-l="0"
+    lx-w="100"
+    lx-t="0"
+    lx-h="50"
+  ></div>
+  <div
+    id="second"
+    lx-l="0"
+    lx-w="100"
+    lx-t="previous.bottom+10"
+    lx-h="50"
+  ></div>
+</div>
+```
+
+## Troubleshooting Tips
+
+### 1. Enable Debug Mode First
+
+Always start with `?lx-debug` to see what's being parsed and resolved.
+
+### 2. Check the Console
+
+LX logs errors to the console with detailed messages.
+
+### 3. Start Simple
+
+Begin with a minimal layout and add complexity incrementally.
+
+### 4. Verify Element IDs
+
+Make sure all `lx-*` elements have unique IDs and IDs are spelled correctly in references.
+
+### 5. Check Attribute Names
+
+Ensure you're using valid attribute names:
+- Position: `lx-left`, `lx-right`, `lx-top`, `lx-bottom` (or aliases)
+- Size: `lx-width`, `lx-height` (or aliases)
+- Ratio: `lx-aspect`
+
+## Error Reference
+
+| Error Type | Message Pattern |
+|------------|-----------------|
+| Missing ID | `Element must have an id` |
+| Circular Dependency | `Circular dependency detected` |
+| Insufficient | `Insufficient constraints` |
+| Over-constrained | `Over-constrained element` |
+| Aspect + Range | `Aspect ratio cannot be used with range size` |
+| Invalid Aspect | `Invalid aspect ratio format` |
+| Undefined Variable | `Undefined variable` |
+| Division by Zero | `Division by zero` |
+| Boundary Error | `Cannot use 'previous/next' on` |
+
+## Next Steps
+
+- [Basic Syntax](/guides/basic-syntax/) - Syntax reference
+- [Examples](/examples/basic-layout/) - Working examples

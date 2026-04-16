@@ -1,0 +1,225 @@
+---
+title: Basic Layout Examples
+description: Simple page structures demonstrating LX core features
+---
+
+## Typical Page Structure
+
+A basic page with Header, Sidebar, and Main Content:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/@simbafs/lx/dist/lx.min.js"></script>
+</head>
+<body style="margin: 0; padding: 20px;">
+  <div
+    id="header"
+    lx-l="0"
+    lx-r="0"
+    lx-t="0"
+    lx-h="60"
+    style="background: #3498db; color: white; padding: 10px;"
+  >
+    Header
+  </div>
+
+  <div
+    id="sidebar"
+    lx-l="0"
+    lx-w="200"
+    lx-t="previous.bottom+20"
+    lx-b="0"
+    style="background: #2ecc71; color: white; padding: 10px;"
+  >
+    Sidebar
+  </div>
+
+  <div
+    id="main"
+    lx-l="previous.right+20"
+    lx-r="0"
+    lx-t="header.bottom+20"
+    lx-b="0"
+    style="background: #e74c3c; color: white; padding: 10px;"
+  >
+    Main Content
+  </div>
+</body>
+</html>
+```
+
+
+
+## Using Containers
+
+Adding the `lx` attribute creates a new reference container:
+
+```html
+<body lx style="margin: 0;">
+  <div
+    id="header"
+    lx-l="0"
+    lx-r="0"
+    lx-t="0"
+    lx-h="60"
+    style="background: #3498db; color: white;"
+  >
+    Header
+  </div>
+
+  <div
+    id="layout"
+    lx
+    lx-l="0"
+    lx-r="0"
+    lx-t="previous.bottom+20"
+    lx-b="0"
+    style="background: #ecf0f1;"
+  >
+    <div
+      id="sidebar"
+      lx-l="0"
+      lx-w="200"
+      lx-t="0"
+      lx-b="0"
+      style="background: #2ecc71; color: white;"
+    >
+      Sidebar
+    </div>
+
+    <div
+      id="content"
+      lx-l="previous.right+20"
+      lx-r="0"
+      lx-t="0"
+      lx-b="0"
+      style="background: #fff;"
+    >
+      Content
+    </div>
+  </div>
+</body>
+```
+
+
+
+## Using Variables for Spacing
+
+```html
+<body lx data-lx-gap="20" data-lx-padding="20">
+  <div
+    id="header"
+    lx-l="({padding})"
+    lx-r="({padding})"
+    lx-t="0"
+    lx-h="60"
+  >
+    Header
+  </div>
+
+  <div
+    id="sidebar"
+    lx-l="({padding})"
+    lx-w="200"
+    lx-t="previous.bottom+({gap})"
+    lx-b="({padding})"
+  >
+    Sidebar
+  </div>
+
+  <div
+    id="main"
+    lx-l="previous.right+({gap})"
+    lx-r="({padding})"
+    lx-t="header.bottom+({gap})"
+    lx-b="({padding})"
+  >
+    Main Content
+  </div>
+</body>
+```
+
+
+
+## Responsive Aspect Ratio Cards
+
+Create fixed-ratio elements using `lx-aspect`:
+
+```html
+<body lx data-lx-padding="20">
+  <div
+    id="card1"
+    lx-l="0"
+    lx-w="300"
+    lx-t="0"
+    lx-a="16:9"
+  >16:9 Card</div>
+  <div
+    id="card2"
+    lx-l="0"
+    lx-w="200"
+    lx-t="previous.bottom+20"
+    lx-a="1:1"
+  >1:1 Card</div>
+  <div
+    id="card3"
+    lx-l="0"
+    lx-w="400"
+    lx-t="previous.bottom+20"
+    lx-a="4:3"
+  >4:3 Card</div>
+</body>
+```
+
+
+
+## Centered Box
+
+Use two constraints per axis to center an element:
+
+```html
+<body lx data-lx-padding="20">
+  <div
+    id="box"
+    lx-l="({padding})"
+    lx-r="({padding})"
+    lx-t="({padding})"
+    lx-b="({padding})"
+  >
+    This box fills the available space
+  </div>
+</body>
+```
+
+Or center a fixed-size element:
+
+```html
+<body lx data-lx-padding="20">
+  <div
+    id="modal"
+    lx-l="(body.width-400)/2"
+    lx-w="400"
+    lx-t="(body.height-300)/2"
+    lx-h="300"
+  >
+    Centered Modal
+  </div>
+</body>
+```
+
+## Stacked Cards
+
+```html
+<body lx data-lx-gap="16" data-lx-padding="20">
+  <div id="card1" lx-l="0" lx-r="0" lx-t="0" lx-h="120">Card 1</div>
+  <div id="card2" lx-l="0" lx-r="0" lx-t="previous.bottom+({gap})" lx-h="120">Card 2</div>
+  <div id="card3" lx-l="0" lx-r="0" lx-t="previous.bottom+({gap})" lx-h="120">Card 3</div>
+</body>
+```
+
+## Next Steps
+
+- [Advanced Nesting Examples](/examples/advanced-nesting/) - Complex layout patterns
+- [Layout Configuration](/guides/layout-configuration/) - Aspect ratios and responsive design

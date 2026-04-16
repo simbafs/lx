@@ -1,0 +1,388 @@
+---
+title: Advanced Nesting Examples
+description: Complex layout patterns using nested containers and advanced features
+---
+
+## Nested Layout
+
+LX's container system makes nested layouts intuitive:
+
+```html
+<body lx data-lx-gap="20" data-lx-padding="20">
+  <div
+    id="app"
+    lx
+    lx-l="0"
+    lx-r="0"
+    lx-t="0"
+    lx-b="0"
+  >
+    <div id="header" lx-l="0" lx-r="0" lx-t="0" lx-h="50">
+      Header
+    </div>
+
+    <div
+      id="main-area"
+      lx
+      lx-l="0"
+      lx-r="0"
+      lx-t="previous.bottom+({gap})"
+      lx-b="0"
+    >
+      <div
+        id="sidebar"
+        lx
+        lx-l="0"
+        lx-w="200"
+        lx-t="0"
+        lx-b="0"
+      >
+        <div id="menu-item1" lx-l="0" lx-r="0" lx-t="0" lx-h="40">Menu 1</div>
+        <div id="menu-item2" lx-l="0" lx-r="0" lx-t="previous.bottom+10" lx-h="40">Menu 2</div>
+        <div id="menu-item3" lx-l="0" lx-r="0" lx-t="previous.bottom+10" lx-h="40">Menu 3</div>
+      </div>
+
+      <div
+        id="content"
+        lx
+        lx-l="previous.right+({gap})"
+        lx-r="0"
+        lx-t="0"
+        lx-b="0"
+      >
+        <div id="card1" lx-l="0" lx-w="200" lx-t="0" lx-h="150">Card 1</div>
+        <div id="card2" lx-l="0" lx-w="200" lx-t="previous.bottom+({gap})" lx-h="150">Card 2</div>
+        <div id="card3" lx-l="0" lx-w="200" lx-t="previous.bottom+({gap})" lx-h="150">Card 3</div>
+      </div>
+    </div>
+  </div>
+</body>
+```
+
+
+
+## Using next for Adjacent Elements
+
+When element order is known, using `next` can simplify code significantly:
+
+```html
+<div id="container" lx data-lx-gap="10">
+  <div
+    id="item1"
+    lx-l="0"
+    lx-w="100"
+    lx-t="0"
+    lx-h="50"
+  >Item 1</div>
+  <div
+    id="item2"
+    lx-l="previous.right+({gap})"
+    lx-w="100"
+    lx-t="next.top-({gap})"
+    lx-h="50"
+  >Item 2</div>
+  <div
+    id="item3"
+    lx-l="previous.right+({gap})"
+    lx-w="100"
+    lx-t="next.top-({gap})"
+    lx-h="50"
+  >Item 3</div>
+  <div
+    id="item4"
+    lx-l="previous.right+({gap})"
+    lx-w="100"
+    lx-t="next.top-({gap})"
+    lx-h="50"
+  >Item 4</div>
+</div>
+```
+
+
+
+## Grid System
+
+Build grids using nested containers:
+
+```html
+<body lx data-lx-gap="20" data-lx-padding="20">
+  <div
+    id="grid"
+    lx
+    lx-l="0"
+    lx-r="0"
+    lx-t="0"
+    lx-b="0"
+  >
+    <div
+      id="row1"
+      lx
+      lx-l="0"
+      lx-r="0"
+      lx-t="0"
+      lx-h="100"
+    >
+      <div
+        id="cell1-1"
+        lx
+        lx-l="0"
+        lx-w="calc(33.33%-({gap}*2/3))"
+        lx-t="0"
+        lx-b="0"
+      >Cell 1-1</div>
+      <div
+        id="cell1-2"
+        lx
+        lx-l="previous.right+({gap})"
+        lx-w="calc(33.33%-({gap}*2/3))"
+        lx-t="0"
+        lx-b="0"
+      >Cell 1-2</div>
+      <div
+        id="cell1-3"
+        lx
+        lx-l="previous.right+({gap})"
+        lx-w="calc(33.33%-({gap}*2/3))"
+        lx-t="0"
+        lx-b="0"
+      >Cell 1-3</div>
+    </div>
+
+    <div
+      id="row2"
+      lx
+      lx-l="0"
+      lx-r="0"
+      lx-t="previous.bottom+({gap})"
+      lx-h="100"
+    >
+      <div
+        id="cell2-1"
+        lx
+        lx-l="0"
+        lx-w="calc(50%-({gap}/2))"
+        lx-t="0"
+        lx-b="0"
+      >Cell 2-1</div>
+      <div
+        id="cell2-2"
+        lx
+        lx-l="previous.right+({gap})"
+        lx-w="calc(50%-({gap}/2))"
+        lx-t="0"
+        lx-b="0"
+      >Cell 2-2</div>
+    </div>
+  </div>
+</body>
+```
+
+
+
+## Dynamic Updates
+
+LX supports dynamic updates, suitable for scenarios that respond to data changes:
+
+```javascript
+document.body.dataset.lxGap = '40';
+lx.update();
+```
+
+```html
+<body data-lx-gap="20" data-lx-scale="1">
+  <div
+    id="card"
+    lx-l="0"
+    lx-w="({scale}*200)"
+    lx-t="0"
+    lx-h="({scale}*100)"
+  >
+    <button onclick="document.body.dataset.lxScale = '1.5'; lx.update();">
+      Scale Up
+    </button>
+  </div>
+</body>
+```
+
+## Form Layout
+
+Use the grid system to create aligned forms:
+
+```html
+<div id="form" lx data-lx-gap="15" data-lx-padding="20">
+  <div
+    id="form-row1"
+    lx
+    lx-l="0"
+    lx-r="0"
+    lx-t="0"
+    lx-h="40"
+  >
+    <div id="label1" lx-l="0" lx-w="100" lx-t="0" lx-b="0">Name:</div>
+    <div id="input1" lx lx-l="previous.right+10" lx-r="0" lx-t="0" lx-b="0">Input</div>
+  </div>
+
+  <div
+    id="form-row2"
+    lx
+    lx-l="0"
+    lx-r="0"
+    lx-t="previous.bottom+({gap})"
+    lx-h="40"
+  >
+    <div id="label2" lx-l="0" lx-w="100" lx-t="0" lx-b="0">Email:</div>
+    <div id="input2" lx lx-l="previous.right+10" lx-r="0" lx-t="0" lx-b="0">Input</div>
+  </div>
+
+  <div
+    id="form-row3"
+    lx
+    lx-l="0"
+    lx-r="0"
+    lx-t="previous.bottom+({gap})"
+    lx-h="40"
+  >
+    <div id="label3" lx-l="0" lx-w="100" lx-t="0" lx-b="0">Message:</div>
+    <div id="input3" lx lx-l="previous.right+10" lx-r="0" lx-t="0" lx-b="0">Input</div>
+  </div>
+</div>
+```
+
+## Dashboard Layout
+
+Complete dashboard with sidebar navigation, header, and content area:
+
+```html
+<body lx data-lx-gap="0" data-lx-padding="0" style="margin: 0;">
+  <div
+    id="app"
+    lx
+    lx-l="0"
+    lx-r="0"
+    lx-t="0"
+    lx-b="0"
+  >
+    <div
+      id="sidebar"
+      lx
+      lx-l="0"
+      lx-w="250"
+      lx-t="0"
+      lx-b="0"
+      style="background: #2c3e50; color: white;"
+    >
+      <div id="logo" lx-l="20" lx-r="20" lx-t="20" lx-h="40">Logo</div>
+      <div
+        id="nav"
+        lx
+        lx-l="0"
+        lx-r="0"
+        lx-t="80"
+        lx-b="0"
+      >
+        <div id="nav-item1" lx-l="20" lx-r="20" lx-t="0" lx-h="44">Dashboard</div>
+        <div id="nav-item2" lx-l="20" lx-r="20" lx-t="previous.bottom" lx-h="44">Users</div>
+        <div id="nav-item3" lx-l="20" lx-r="20" lx-t="previous.bottom" lx-h="44">Settings</div>
+      </div>
+    </div>
+
+    <div
+      id="header"
+      lx
+      lx-l="previous.right"
+      lx-r="0"
+      lx-t="0"
+      lx-h="60"
+      style="background: #34495e; color: white;"
+    >
+      <div id="page-title" lx-l="20" lx-w="200" lx-t="0" lx-b="0">Dashboard</div>
+      <div
+        id="user-menu"
+        lx
+        lx-l="previous.right+20"
+        lx-r="20"
+        lx-t="0"
+        lx-b="0"
+      >User</div>
+    </div>
+
+    <div
+      id="content"
+      lx
+      lx-l="sidebar.right"
+      lx-r="0"
+      lx-t="previous.bottom"
+      lx-b="0"
+      style="background: #ecf0f1; padding: 20px;"
+    >
+      <div
+        id="card-grid"
+        lx
+        lx-l="0"
+        lx-r="0"
+        lx-t="0"
+        lx-b="0"
+      >
+        <div id="stat1" lx lx-l="0" lx-w="200" lx-t="0" lx-h="100">Stat 1</div>
+        <div id="stat2" lx lx-l="previous.right+20" lx-w="200" lx-t="0" lx-h="100">Stat 2</div>
+        <div id="stat3" lx lx-l="previous.right+20" lx-w="200" lx-t="0" lx-h="100">Stat 3</div>
+      </div>
+    </div>
+  </div>
+</body>
+```
+
+## Masonry Layout
+
+Using aspect ratios to create a masonry-style layout:
+
+```html
+<body lx data-lx-gap="10" data-lx-padding="20">
+  <div
+    id="masonry"
+    lx
+    lx-l="0"
+    lx-r="0"
+    lx-t="0"
+    lx-b="0"
+  >
+    <div
+      id="item1"
+      lx
+      lx-l="0"
+      lx-w="150"
+      lx-t="0"
+      lx-a="1:1"
+    >1:1</div>
+    <div
+      id="item2"
+      lx
+      lx-l="previous.right+({gap})"
+      lx-w="150"
+      lx-t="0"
+      lx-a="16:9"
+    >16:9</div>
+    <div
+      id="item3"
+      lx
+      lx-l="0"
+      lx-w="150"
+      lx-t="previous.bottom+({gap})"
+      lx-a="4:3"
+    >4:3</div>
+    <div
+      id="item4"
+      lx
+      lx-l="previous.right+({gap})"
+      lx-w="150"
+      lx-t="0"
+      lx-a="9:16"
+    >9:16</div>
+  </div>
+</body>
+```
+
+## Next Steps
+
+- [Basic Layout Examples](/examples/basic-layout/) - Simpler examples
+- [Error Handling](/guides/error-handling/) - Troubleshooting issues

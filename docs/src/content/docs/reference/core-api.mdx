@@ -1,0 +1,198 @@
+---
+title: Core API
+description: LX public API reference
+---
+
+## Global API
+
+When included via script tag, LX exposes these globals:
+
+### `window.lx`
+
+```typescript
+window.lx = {
+  setup(root?: ParentNode, options?: InitOptions): void;
+  update(): void;
+}
+```
+
+### `lx.setup(root?, options?)`
+
+Initialize LX on a root element.
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `root` | `ParentNode` | `document.body` | Root element to scan |
+| `options` | `InitOptions` | `{}` | Configuration options |
+
+**Example:**
+
+```typescript
+lx.setup(document.body, { debug: true });
+```
+
+### `lx.update()`
+
+Recalculate and reapply all layouts.
+
+Call this when:
+- Variables change (`data-lx-*` attributes)
+- Element content changes (affects range size elements)
+- Manual CSS changes that affect layout
+
+**Example:**
+
+```javascript
+document.body.dataset.lxGap = '40';
+lx.update();
+```
+
+### `lx.boot()`
+
+Automatically called on page load. Parses URL for `?lx-debug` and calls `setup()`.
+
+## Module API
+
+When imported as ES module:
+
+```typescript
+import { setup, update, boot } from '@simbafs/lx';
+```
+
+### `setup(root?, options?)`
+
+Same as `lx.setup()`.
+
+### `update()`
+
+Same as `lx.update()`.
+
+### `boot()`
+
+Same as `lx.boot()`.
+
+## InitOptions
+
+```typescript
+interface InitOptions {
+  debug?: boolean;
+}
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `debug` | `boolean` | Enable debug output |
+
+## Auto Mode API
+
+When using `lx-auto.min.js`, additional auto-update functionality is enabled:
+
+### `window.lxAuto`
+
+```typescript
+window.lxAuto = {
+  requestRelayout(): void;
+  scanForRangeSizeElements(): void;
+  destroy(): void;
+}
+```
+
+### `lxAuto.requestRelayout()`
+
+Request a layout recalculation on next animation frame.
+
+### `lxAuto.scanForRangeSizeElements()`
+
+Rescan for elements with range sizes and apply constraints.
+
+### `lxAuto.destroy()`
+
+Remove all observers and cleanup. Layout will no longer auto-update.
+
+## Events
+
+LX auto mode listens to these browser events:
+
+| Event | Action |
+|-------|--------|
+| `resize` | Calls `update()` |
+| `DOMContentLoaded` | Calls `boot()` |
+| `load` | Initial layout calculation |
+| `mutation` | Rescans DOM if `lx-*` elements added/removed |
+| `input` | Updates layout for text content changes |
+
+## Return Values
+
+All API functions return `void`. Errors are logged to console.
+
+## Type Definitions
+
+```typescript
+// packages/core/src/types.ts
+
+export interface InitOptions {
+  debug?: boolean;
+}
+
+export type Edge = 'left' | 'right' | 'top' | 'bottom';
+
+export type PositionAttrName = 'lx-left' | 'lx-right' | 'lx-top' | 'lx-bottom';
+
+export type SizeAttrName = 'lx-width' | 'lx-height';
+
+export interface BodyPositionExpr {
+  type: 'body-ref';
+  edge: Edge;
+  offset: number;
+  raw: string;
+}
+
+export interface ElementPositionExpr {
+  type: 'element-ref';
+  targetId: string;
+  edge: Edge;
+  offset: number;
+  raw: string;
+}
+
+export type PositionExpr = BodyPositionExpr | ElementPositionExpr;
+
+export interface FixedSizeExpr {
+  type: 'fixed';
+  value: number;
+  raw: string;
+}
+
+export interface RangeSizeExpr {
+  type: 'range';
+  min: number;
+  max: number;
+  raw: string;
+}
+
+export type SizeExpr = FixedSizeExpr | RangeSizeExpr;
+
+export interface AspectExpr {
+  type: 'aspect';
+  width: number;
+  height: number;
+  ratio: number;
+  raw: string;
+}
+
+export interface ResolvedBox {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  width: number;
+  height: number;
+}
+```
+
+## Next Steps
+
+- [TypeScript Definitions](/reference/types/) - Complete type reference
+- [Configuration Reference](/reference/configuration/) - All configuration options

@@ -1,0 +1,100 @@
+---
+import { Code } from '@astrojs/starlight/components';
+
+interface Props {
+  height?: string;
+  title?: string;
+  code: string;
+}
+
+const { height = "300px", title = "Preview", code } = Astro.props;
+
+// 封裝成沙盒 HTML，這裡直接使用絕對路徑，不進行 .replace() 轉義
+const sandboxTemplate = `
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <script src="https://unpkg.com/@simbafs/lx/dist/lx.min.js"></script>
+    <script src="https://unpkg.com/@simbafs/lx/dist/lx-auto.min.js"></script>
+    <style>
+        body { 
+            margin: 0;
+            font-family: sans-serif;
+            background: #fff;
+        }
+        div[lx-left], div[lx-top], .lx-box {
+            background-color: rgba(255, 180, 0, 0.1);
+            border: 1px dashed rgba(255, 140, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: #d48806;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    ${code}
+</body>
+</html>
+`;
+
+// 使用 Base64 避免所有路徑拼接錯誤
+const dataUri = `data:text/html;base64,${Buffer.from(sandboxTemplate).toString('base64')}`;
+---
+
+<div class="lx-preview-card">
+  <div class="lx-preview-header">
+    <span class="lx-preview-title">{title}</span>
+  </div>
+  
+  <div class="lx-preview-body">
+    <iframe
+      src={dataUri}
+      style={`width: 100%; height: ${height}; border: none; display: block;`}
+      loading="lazy"
+    ></iframe>
+  </div>
+
+  <div class="lx-code-section">
+    <Code code={code} lang="html" title="Souece Code" />
+  </div>
+</div>
+
+<style>
+  .lx-preview-card {
+    margin: 2rem 0;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background-color: var(--sl-color-bg-nav);
+  }
+
+  .lx-preview-header {
+    padding: 0.75rem 1rem;
+    background: var(--sl-color-gray-6);
+    border-bottom: 1px solid var(--sl-color-gray-5);
+    display: flex;
+    align-items: center;
+  }
+
+  .lx-preview-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--sl-color-white);
+  }
+
+  .lx-preview-body {
+    margin: 0px;
+    background: white; /* 讓範例在白色背景展示，模擬真實網頁 */
+  }
+
+  /* 調整 Starlight Code 組件在卡片中的外觀 */
+  .lx-code-section :global(pre) {
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+</style>

@@ -1,0 +1,310 @@
+---
+title: Layout Configuration
+description: Advanced layout features including aspect ratios, responsive design, and range constraints
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Aspect Ratio
+
+The `lx-aspect` attribute defines the width-to-height ratio of an element. When one dimension is determined, the other is calculated automatically.
+
+### Syntax
+
+```
+<width>:<height>
+```
+
+### How It Works
+
+When you specify `lx-aspect="16:9"` with a width:
+
+```html
+<div
+  id="video"
+  lx-l="0"
+  lx-w="400"
+  lx-t="0"
+  lx-aspect="16:9"
+></div>
+```
+
+The height is calculated:
+```
+height = width / ratio = 400 / (16/9) = 225
+```
+
+
+
+### Horizontal Dominant (Width Derives Height)
+
+1. Specify two horizontal constraints (e.g., `lx-left` + `lx-right`, or `lx-left` + `lx-width`)
+2. Specify one vertical constraint (e.g., `lx-top`)
+3. Add `lx-aspect`
+
+```html
+<div
+  id="video"
+  lx-l="20"
+  lx-r="20"
+  lx-t="0"
+  lx-aspect="16:9"
+></div>
+<!-- Width determined by left/right, height derived from aspect -->
+```
+
+### Vertical Dominant (Height Derives Width)
+
+1. Specify two vertical constraints (e.g., `lx-top` + `lx-bottom`, or `lx-top` + `lx-height`)
+2. Specify one horizontal constraint (e.g., `lx-left`)
+3. Add `lx-aspect`
+
+```html
+<div
+  id="portrait"
+  lx-l="20"
+  lx-t="0"
+  lx-b="0"
+  lx-aspect="3:4"
+></div>
+<!-- Height determined by top/bottom, width derived from aspect -->
+```
+
+### Aspect Ratio Cards
+
+Create cards with fixed ratios that adapt to container width:
+
+```html
+<body lx data-lx-padding="20">
+  <div
+    id="card1"
+    lx-l="0"
+    lx-w="300"
+    lx-t="0"
+    lx-a="16:9"
+  ></div>
+  <div
+    id="card2"
+    lx-l="0"
+    lx-w="200"
+    lx-t="previous.bottom+20"
+    lx-a="1:1"
+  ></div>
+  <div
+    id="card3"
+    lx-l="0"
+    lx-w="400"
+    lx-t="previous.bottom+20"
+    lx-a="4:3"
+  ></div>
+</body>
+```
+
+
+
+### Common Aspect Ratios
+
+| Name | Ratio | Use Case |
+|------|-------|----------|
+| Widescreen | `16:9` | Videos, modern displays |
+| Standard | `4:3` | Traditional displays |
+| Square | `1:1` | Avatars, thumbnails |
+| Portrait | `9:16` | Mobile video, stories |
+| Cinematic | `21:9` | Ultrawide displays |
+| Golden | `1.618:1` | Aesthetic proportions |
+
+## Responsive Design
+
+LX supports responsive layouts through variables and expressions.
+
+### Using Variables
+
+Define values in `data-lx-*` attributes and reference them with expressions:
+
+```html
+<body lx data-lx-padding="20" data-lx-gap="16">
+  <div
+    id="header"
+    lx-l="({padding})"
+    lx-r="({padding})"
+    lx-t="0"
+    lx-h="60"
+  ></div>
+  <div
+    id="sidebar"
+    lx-l="({padding})"
+    lx-w="200"
+    lx-t="previous.bottom+({gap})"
+    lx-b="({padding})"
+  ></div>
+  <div
+    id="main"
+    lx-l="previous.right+({gap})"
+    lx-r="({padding})"
+    lx-t="header.bottom+({gap})"
+    lx-b="({padding})"
+  ></div>
+</body>
+```
+
+### Dynamic Updates
+
+Update variables and trigger re-layout:
+
+```javascript
+document.body.dataset.lxGap = '40';
+lx.update();
+```
+
+```html
+<button onclick="document.body.dataset.lxScale = '1.5'; lx.update();">
+  Scale Up
+</button>
+```
+
+### Responsive Breakpoints
+
+Combine with CSS media queries:
+
+```javascript
+function updatePadding() {
+  const padding = window.innerWidth < 768 ? 10 : 20;
+  document.body.dataset.lxPadding = padding;
+  lx.update();
+}
+
+window.addEventListener('resize', updatePadding);
+```
+
+## Range Size Constraints
+
+Range sizes constrain elements between minimum and maximum values.
+
+### Syntax
+
+```
+<min>/<max>
+```
+
+### Usage
+
+```html
+<div
+  id="sidebar"
+  lx-w="200/400"
+  lx-h="100/300"
+></div>
+```
+
+- Width: minimum 200px, maximum 400px
+- Height: minimum 100px, maximum 300px
+
+### How It Works
+
+1. First layout pass applies CSS min/max constraints
+2. Element is rendered and measured with `getBoundingClientRect()`
+3. Actual size is clamped to the specified range
+4. Size is written back to the element
+
+
+
+### Common Patterns
+
+#### Sidebar with Min/Max Width
+
+```html
+<div
+  id="sidebar"
+  lx-l="0"
+  lx-w="250/400"
+  lx-t="0"
+  lx-b="0"
+></div>
+```
+
+#### Card Grid
+
+```html
+<div
+  id="card"
+  lx-l="0"
+  lx-w="200/300"
+  lx-t="0"
+  lx-h="150/250"
+></div>
+```
+
+### Limitations
+
+- Range sizes cannot be used with `lx-aspect` on the same element
+- Width and height cannot both be range sizes
+- Range sizes depend on browser layout, so there may be visual jitter during resize
+
+## Combining Features
+
+### Responsive Aspect Ratio Cards
+
+```html
+<body lx data-lx-padding="20">
+  <div
+    id="card-container"
+    lx
+    lx-l="0"
+    lx-r="0"
+    lx-t="0"
+    lx-b="0"
+  >
+    <div
+      id="card"
+      lx-l="0"
+      lx-w="(body.width-({padding}*3))/2"
+      lx-t="0"
+      lx-a="16:9"
+    ></div>
+  </div>
+</body>
+```
+
+### Flexible Grid with Gap
+
+```html
+<div id="grid" lx data-lx-gap="20" data-lx-padding="20">
+  <div
+    id="cell1"
+    lx
+    lx-l="0"
+    lx-w="calc(50%-({gap}/2))"
+    lx-t="0"
+    lx-h="100"
+  ></div>
+  <div
+    id="cell2"
+    lx
+    lx-l="previous.right+({gap})"
+    lx-w="calc(50%-({gap}/2))"
+    lx-t="0"
+    lx-h="100"
+  ></div>
+  <div
+    id="cell3"
+    lx
+    lx-l="0"
+    lx-w="calc(50%-({gap}/2))"
+    lx-t="previous.bottom+({gap})"
+    lx-h="100"
+  ></div>
+  <div
+    id="cell4"
+    lx
+    lx-l="previous.right+({gap})"
+    lx-w="calc(50%-({gap}/2))"
+    lx-t="previous.bottom+({gap})"
+    lx-h="100"
+  ></div>
+</div>
+```
+
+## Next Steps
+
+- [Integration](/guides/integration/) - Using LX with React, Vue, Svelte
+- [Error Handling](/guides/error-handling/) - Troubleshooting common issues

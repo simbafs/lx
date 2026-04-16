@@ -10,15 +10,15 @@ export default defineConfig({
 			sidebar: [
 				{
 					label: 'Getting Started',
-					link: '/getting-started/',
+					autogenerate: { directory: 'getting-started' },
 				},
 				{
-					label: 'Canonical Syntax',
-					autogenerate: { directory: 'canonical' },
+					label: 'Guides',
+					autogenerate: { directory: 'guides' },
 				},
 				{
-					label: 'Sugar Syntax',
-					autogenerate: { directory: 'sugar' },
+					label: 'Reference',
+					autogenerate: { directory: 'reference' },
 				},
 				{
 					label: 'Examples',

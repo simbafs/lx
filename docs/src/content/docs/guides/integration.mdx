@@ -1,0 +1,299 @@
+---
+title: Integration
+description: Using LX with React, Vue, Svelte, and other frameworks
+---
+
+## Vanilla HTML
+
+LX works out of the box with any HTML. Just add the script:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/@simbafs/lx/dist/lx-auto.min.js"></script>
+</head>
+<body>
+  <!-- Your layout here -->
+</body>
+</html>
+```
+
+## React
+
+### Option 1: Script Tag
+
+Include LX via CDN and use normally:
+
+```jsx
+function App() {
+  return (
+    <div id="app" lx>
+      <div
+        id="header"
+        lx-l="0"
+        lx-r="0"
+        lx-t="0"
+        lx-h="60"
+      >
+        Header
+      </div>
+      <div
+        id="content"
+        lx-l="0"
+        lx-r="0"
+        lx-t="previous.bottom+20"
+        lx-b="0"
+      >
+        Content
+      </div>
+    </div>
+  );
+}
+```
+
+### Option 2: Dynamic Update on State Change
+
+When React state affects layout, trigger `lx.update()`:
+
+```jsx
+import { useEffect } from 'react';
+import { update } from '@simbafs/lx';
+
+function ResponsiveLayout({ isWide }) {
+  useEffect(() => {
+    document.body.dataset.padding = isWide ? '40' : '20';
+    update();
+  }, [isWide]);
+
+  return (
+    <div id="app" lx data-lx-padding={isWide ? '40' : '20'}>
+      {/* layout */}
+    </div>
+  );
+}
+```
+
+### React with useLayoutEffect
+
+```jsx
+import { useLayoutEffect, useRef } from 'react';
+
+function Sidebar() {
+  const ref = useRef(null);
+
+  useLayoutEffect(() => {
+    // LX setup is automatic via lx-auto, 
+    // but manual setup gives more control:
+    import('@simbafs/lx').then(({ setup }) => {
+      setup(ref.current);
+    });
+  }, []);
+
+  return <div ref={ref} id="sidebar" lx>...</div>;
+}
+```
+
+## Vue
+
+### Composition API
+
+```vue
+<script setup>
+import { onMounted, watch } from 'vue';
+import { setup, update } from '@simbafs/lx';
+
+const props = defineProps<{
+  gap: number;
+}>();
+
+onMounted(() => {
+  setup();
+});
+
+watch(() => props.gap, (newGap) => {
+  document.body.dataset.lxGap = String(newGap);
+  update();
+});
+</script>
+
+<template>
+  <div id="app" lx>
+    <div
+      id="item1"
+      lx-l="0"
+      lx-w="100"
+      lx-t="0"
+      lx-h="50"
+    >Item 1</div>
+    <div
+      id="item2"
+      lx-l="0"
+      lx-w="100"
+      lx-t="previous.bottom+({gap})"
+      lx-h="50"
+    >Item 2</div>
+  </div>
+</template>
+```
+
+### Reactive Variables
+
+```vue
+<script setup>
+import { computed } from 'vue';
+import { update } from '@simbafs/lx';
+
+const padding = computed(() => window.innerWidth < 768 ? 10 : 20);
+
+const updatePadding = () => {
+  document.body.dataset.lxPadding = padding.value;
+  update();
+};
+
+// Update on mount and resize
+import { onMounted, onUnmounted } from 'vue';
+
+onMounted(() => {
+  window.addEventListener('resize', updatePadding);
+  updatePadding();
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updatePadding);
+});
+</script>
+```
+
+## Svelte
+
+### Script Block
+
+```svelte
+<script>
+  import { onMount } from 'svelte';
+  import { setup, update } from '@simbafs/lx';
+
+  let { gap = 20 } = $props();
+
+  onMount(() => {
+    setup();
+  });
+
+  $effect(() => {
+    document.body.dataset.lxGap = gap;
+    update();
+  });
+</script>
+
+<div id="app" lx>
+  <div
+    id="item1"
+    lx-l="0"
+    lx-w="100"
+    lx-t="0"
+    lx-h="50"
+  >Item 1</div>
+  <div
+    id="item2"
+    lx-l="0"
+    lx-w="100"
+    lx-t="previous.bottom+({gap})"
+    lx-h="50"
+  >Item 2</div>
+</div>
+```
+
+### Svelte 5 Runes
+
+```svelte
+<script>
+  import { onMount } from 'svelte';
+  import { setup, update } from '@simbafs/lx';
+
+  let padding = $state(20);
+
+  onMount(() => {
+    setup();
+  });
+
+  function handleResize() {
+    padding = window.innerWidth < 768 ? 10 : 20;
+    document.body.dataset.lxPadding = String(padding);
+    update();
+  }
+</script>
+
+<svelte:window onresize={handleResize} />
+
+<div id="app" lx>
+  <div
+    id="sidebar"
+    lx-l="0"
+    lx-w="200"
+    lx-t="0"
+    lx-b="0"
+  ></div>
+  <div
+    id="content"
+    lx-l="previous.right+({padding})"
+    lx-r="0"
+    lx-t="0"
+    lx-b="0"
+  ></div>
+</div>
+```
+
+## TypeScript
+
+LX is written in TypeScript and ships with type definitions:
+
+```typescript
+import { setup, update, InitOptions } from '@simbafs/lx';
+
+const options: InitOptions = {
+  debug: true,
+};
+
+setup(document.body, options);
+
+// Later when data changes
+update();
+```
+
+## Handling Dynamic Content
+
+When framework state affects layout dimensions, call `lx.update()`:
+
+| Framework | Trigger |
+|-----------|---------|
+| React | `useEffect` or `useLayoutEffect` |
+| Vue | `watch` or `$watch` |
+| Svelte | `$effect` or `$: ` reactive statement |
+| Solid | `createEffect` |
+
+## SSR Considerations
+
+LX requires DOM access. For SSR frameworks:
+
+1. Check for browser environment before importing:
+   ```typescript
+   if (typeof window !== 'undefined') {
+     import('@simbafs/lx').then(({ setup }) => setup());
+   }
+   ```
+
+2. Or use dynamic import in client-only components:
+   ```typescript
+   // components/Layout.tsx
+   'use client';
+   
+   useEffect(() => {
+     import('@simbafs/lx').then(({ setup }) => setup());
+   }, []);
+   ```
+
+## Next Steps
+
+- [Error Handling](/guides/error-handling/) - Troubleshooting common issues
+- [Examples](/examples/basic-layout/) - Complete layout examples

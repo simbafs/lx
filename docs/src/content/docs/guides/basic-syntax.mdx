@@ -1,0 +1,267 @@
+---
+title: Basic Syntax
+description: Complete reference for LX attribute syntax
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Position Attributes
+
+### Syntax
+
+```
+<ref>.<edge>[+|-offset]
+```
+
+### Reference (`ref`)
+
+| Value | Description |
+|-------|-------------|
+| `body` | Viewport |
+| `#id` | Element with specified ID |
+
+### Edge
+
+| Value | Description |
+|-------|-------------|
+| `left` | Left boundary |
+| `right` | Right boundary |
+| `top` | Top boundary |
+| `bottom` | Bottom boundary |
+
+### Offset
+
+- Integer or floating point number
+- Can be omitted (default is 0)
+- Use `+` for positive, write `-` directly for negative
+
+### Examples
+
+```html
+<div
+  id="box"
+  lx-left="body.left+0"
+  lx-top="body.top+0"
+>
+  Positioned at viewport top-left
+</div>
+
+<div
+  id="inner"
+  lx-left="#box.left+20"
+  lx-right="#box.right-20"
+  lx-top="#box.top+30"
+  lx-bottom="#box.bottom-30"
+>
+  20px inset from #box
+</div>
+```
+
+## Size Attributes
+
+### Fixed Size
+
+<Tabs>
+  <TabItem label="Sugar">
+    ```html
+    <div
+      id="box"
+      lx-w="300"
+      lx-h="200"
+    ></div>
+    ```
+  </TabItem>
+  <TabItem label="Canonical">
+    ```html
+    <div
+      id="box"
+      lx-width="300"
+      lx-height="200"
+    ></div>
+    ```
+  </TabItem>
+</Tabs>
+
+### Range Size
+
+Constrain size between minimum and maximum values:
+
+<Tabs>
+  <TabItem label="Sugar">
+    ```html
+    <div
+      id="box"
+      lx-w="200/500"
+      lx-h="100/300"
+    ></div>
+    ```
+  </TabItem>
+  <TabItem label="Canonical">
+    ```html
+    <div
+      id="box"
+      lx-width="200/500"
+      lx-height="100/300"
+    ></div>
+    ```
+  </TabItem>
+</Tabs>
+
+### Expression Size
+
+Use variables or math expressions:
+
+<Tabs>
+  <TabItem label="Sugar">
+    ```html
+    <div
+      id="box"
+      lx-w="({container}/2)"
+      lx-h="({width}*0.75)"
+    ></div>
+    ```
+  </TabItem>
+  <TabItem label="Canonical">
+    ```html
+    <div
+      id="box"
+      lx-width="({container}/2)"
+      lx-height="({width}*0.75)"
+    ></div>
+    ```
+  </TabItem>
+</Tabs>
+
+## Aspect Ratio
+
+Define width-to-height ratio:
+
+<Tabs>
+  <TabItem label="Sugar">
+    ```html
+    <div id="box" lx-a="16:9"></div>
+    ```
+  </TabItem>
+  <TabItem label="Canonical">
+    ```html
+    <div id="box" lx-aspect="16:9"></div>
+    ```
+  </TabItem>
+</Tabs>
+
+### Rules
+
+- `width` and `height` must be positive numbers
+- Cannot be zero
+- Cannot be used with range sizes on the same element
+
+### Common Ratios
+
+```html
+<div id="widescreen" lx-a="16:9"></div>
+<div id="square" lx-a="1:1"></div>
+<div id="classic" lx-a="4:3"></div>
+<div id="portrait" lx-a="9:16"></div>
+```
+
+## Attribute Aliases
+
+All `lx-*` attributes have short aliases:
+
+| Sugar | Canonical | Description |
+|-------|-----------|-------------|
+| `lx-l` | `lx-left` | Left position |
+| `lx-r` | `lx-right` | Right position |
+| `lx-t` | `lx-top` | Top position |
+| `lx-b` | `lx-bottom` | Bottom position |
+| `lx-w` | `lx-width` | Width |
+| `lx-h` | `lx-height` | Height |
+| `lx-a` | `lx-aspect` | Aspect ratio |
+
+## Implicit Reference
+
+When position value is a plain number, the system automatically fills in the reference:
+
+<Tabs>
+  <TabItem label="Sugar">
+    ```html
+    <div
+      id="box"
+      lx-l="10"
+      lx-t="20"
+    ></div>
+    ```
+  </TabItem>
+  <TabItem label="Canonical">
+    ```html
+    <div
+      id="box"
+      lx-left="<container>.left+10"
+      lx-top="<container>.top+20"
+    ></div>
+    ```
+  </TabItem>
+</Tabs>
+
+`<container>` will be the nearest `lx` ancestor, or `body` if none exists.
+
+## Container Elements
+
+Elements with the `lx` attribute become "containers". Child elements will reference this container by default:
+
+```html
+<div id="container" lx>
+  <div
+    id="child"
+    lx-l="0"
+    lx-w="100"
+    lx-t="0"
+    lx-h="100"
+  ></div>
+</div>
+```
+
+In this case, `child`'s position will reference `#container`, not `body`.
+
+## Complete Example
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/@simbafs/lx/dist/lx-auto.min.js"></script>
+</head>
+<body style="margin: 0;">
+  <div id="app" lx>
+    <div
+      id="header"
+      lx-l="0"
+      lx-r="0"
+      lx-t="0"
+      lx-h="60"
+    ></div>
+    <div
+      id="sidebar"
+      lx-l="0"
+      lx-w="250"
+      lx-t="previous.bottom+20"
+      lx-b="0"
+    ></div>
+    <div
+      id="content"
+      lx-l="previous.right+20"
+      lx-r="0"
+      lx-t="header.bottom+20"
+      lx-b="0"
+    ></div>
+  </div>
+</body>
+</html>
+```
+
+
+
+## Next Steps
+
+- [Layout Configuration](/guides/layout-configuration/) - Aspect ratios, responsive design
+- [Error Handling](/guides/error-handling/) - Common issues and solutions

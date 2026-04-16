@@ -1,0 +1,212 @@
+---
+title: Core Concepts
+description: The fundamental ideas behind LX layout system
+---
+
+## Coordinate System
+
+LX uses a standard screen coordinate system:
+
+- **X-axis**: Positive to the right
+- **Y-axis**: Positive downward
+
+Each element has four edges:
+
+| Edge | Description |
+|------|-------------|
+| `left` | Left boundary |
+| `right` | Right boundary |
+| `top` | Top boundary |
+| `bottom` | Bottom boundary |
+
+## Canonical vs Sugar Syntax
+
+LX has two syntax levels. **Canonical** is the formal, unambiguous syntax. **Sugar** is human-friendly shorthand that gets transformed to Canonical internally.
+
+### Canonical (Formal Syntax)
+
+The only official syntax. All other forms are transformed into this:
+
+```html
+<div
+  id="parent"
+  lx-left="body.left+0"
+  lx-top="body.top+0"
+>
+  <div
+    id="child"
+    lx-left="#parent.left+10"
+    lx-width="100"
+    lx-top="#parent.top+10"
+    lx-height="100"
+  ></div>
+</div>
+```
+
+### Sugar (Shorthand Syntax)
+
+Simplified syntax for readability. Automatically transformed during setup:
+
+```html
+<div id="parent" lx>
+  <div
+    id="child"
+    lx-l="10"
+    lx-w="100"
+    lx-t="10"
+    lx-h="100"
+  ></div>
+</div>
+```
+
+Both are equivalent. Sugar is automatically transformed to Canonical internally.
+
+## Containers
+
+Elements with the `lx` attribute become **containers**. Child elements will reference this container by default instead of `body`:
+
+```html
+<div id="container" lx>
+  <div
+    id="child"
+    lx-l="0"
+    lx-w="100"
+    lx-t="0"
+    lx-h="100"
+  ></div>
+</div>
+```
+
+In this case, `child`'s position references `#container`, not `body`.
+
+## Constraint Combinations
+
+LX supports three valid constraint combinations. Each element must have exactly the right amount of information to calculate its position and size.
+
+### Combination A: Standard Constraints (No Aspect)
+
+- **Horizontal**: Choose 2 from `lx-left`, `lx-right`, `lx-width`
+- **Vertical**: Choose 2 from `lx-top`, `lx-bottom`, `lx-height`
+
+```html
+<div
+  id="box"
+  lx-l="10"
+  lx-r="10"
+  lx-t="10"
+  lx-b="10"
+></div>
+```
+
+### Combination B: Aspect Ratio (Width Derives Height)
+
+When `lx-aspect` is present:
+
+- **Horizontal**: Choose 2 (determines width)
+- **Vertical**: Choose 1 (determines starting point)
+- **Ratio**: `lx-aspect` (derives height from width)
+
+```html
+<div
+  id="video"
+  lx-l="0"
+  lx-r="0"
+  lx-t="0"
+  lx-w="400"
+  lx-aspect="16:9"
+></div>
+<!-- Height is calculated: 400 / 16 * 9 = 225 -->
+```
+
+### Combination C: Aspect Ratio (Height Derives Width)
+
+- **Vertical**: Choose 2 (determines height)
+- **Horizontal**: Choose 1 (determines starting point)
+- **Ratio**: `lx-aspect` (derives width from height)
+
+```html
+<div
+  id="portrait"
+  lx-l="0"
+  lx-t="0"
+  lx-h="300"
+  lx-aspect="3:4"
+></div>
+<!-- Width is calculated: 300 * 3 / 4 = 225 -->
+```
+
+## Variables and Expressions
+
+LX supports dynamic values using variables and mathematical expressions:
+
+```html
+<body data-lx-gap="20" data-lx-scale="1">
+  <div
+    id="card"
+    lx-l="0"
+    lx-w="({scale}*200)"
+    lx-t="0"
+    lx-h="({scale}*100)"
+  ></div>
+</body>
+```
+
+### Variable Syntax
+
+```
+{data-lx-[name]="<value>"}
+```
+
+### Supported Operators
+
+| Operator | Example |
+|----------|---------|
+| `+` | `({a}+{b})` |
+| `-` | `({a}-10)` |
+| `*` | `({width}*2)` |
+| `/` | `({total}/2)` |
+
+## Relative Selectors
+
+Reference adjacent elements within the same container using `previous` and `next`:
+
+```html
+<div id="container" lx>
+  <div
+    id="item1"
+    lx-l="0"
+    lx-w="100"
+    lx-t="0"
+    lx-h="50"
+  >Item 1</div>
+  <div
+    id="item2"
+    lx-l="0"
+    lx-w="100"
+    lx-t="previous.bottom+10"
+    lx-h="50"
+  >Item 2</div>
+  <div
+    id="item3"
+    lx-l="0"
+    lx-w="100"
+    lx-t="previous.bottom+10"
+    lx-h="50"
+  >Item 3</div>
+</div>
+```
+
+## How LX Processes Layout
+
+LX follows this pipeline:
+
+1. **Parse**: Collect all `lx-*` attributes, expand sugar to canonical
+2. **Validate**: Check constraint combinations, detect circular dependencies
+3. **Sort**: Topologically sort nodes by dependencies
+4. **Resolve**: Calculate positions and sizes in dependency order
+5. **Apply**: Write CSS to elements
+
+## Next Steps
+
+- [Basic Syntax](/guides/basic-syntax/) - Detailed syntax reference
+- [Layout Configuration](/guides/layout-configuration/) - Aspect ratios and responsive design

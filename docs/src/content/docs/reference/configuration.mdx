@@ -1,0 +1,223 @@
+---
+title: Configuration Reference
+description: All configuration options and settings for LX
+---
+
+## URL Parameters
+
+### `?lx-debug`
+
+Enable debug mode via URL parameter.
+
+```html
+<script src="lx-auto.min.js"></script>
+<!-- Open: http://example.com/?lx-debug -->
+```
+
+Debug output includes:
+- Canonical nodes table
+- Parsed nodes table
+- Dependency order
+- Resolved boxes
+- Applied CSS
+
+## Data Attributes
+
+LX uses `data-lx-*` attributes for variables and configuration.
+
+### Variable Definition
+
+```html
+<body data-lx-[name]="<number>">
+```
+
+Define reusable values that can be referenced in expressions.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `data-lx-*` | number | Variable for use in expressions |
+
+**Example:**
+
+```html
+<body data-lx-gap="20" data-lx-padding="40" data-lx-scale="1">
+  <div id="box" lx-w="({scale}*200)" lx-h="({scale}*100)"></div>
+</body>
+```
+
+### Variable Scope
+
+Variables are resolved with bubble-up lookup:
+
+1. Check current element's `data-lx-*` attributes
+2. Walk up DOM tree to `<body>`
+3. First match wins
+
+```html
+<body data-lx-gap="20">
+  <div id="outer" lx data-lx-gap="40">
+    <div id="inner" lx>
+      <!-- gap = 40 (overridden) -->
+    </div>
+  </div>
+</body>
+```
+
+### Built-in Variables
+
+LX doesn't define any built-in variables. All variables must be explicitly defined.
+
+## Setup Options
+
+### `debug`
+
+```typescript
+setup(root?: ParentNode, options?: { debug?: boolean }): void;
+```
+
+Enable detailed debug output.
+
+**Example:**
+
+```typescript
+lx.setup(document.body, { debug: true });
+```
+
+## CSS Output
+
+LX applies the following CSS to elements:
+
+```css
+position: absolute;
+left: <px>;
+top: <px>;
+width: <px>;
+height: <px>;
+```
+
+### Containing Block
+
+LX uses the nearest ancestor `lx` element as the containing block. If none exists, uses `body`.
+
+CSS `position: absolute` is applied to establish containing block context.
+
+## Auto Mode Behavior
+
+When using `lx-auto.min.js`, LX automatically:
+
+### Triggers
+
+| Event | Action |
+|-------|--------|
+| `window.resize` | `lx.update()` |
+| Range size change | `lx.update()` |
+| DOM mutation (lx elements) | `lx.setup()` |
+| Text content change | `lx.update()` |
+| `data-lx-*` attribute change | `lx.setup()` |
+| `lx-*` attribute change | `lx.setup()` |
+| `id` attribute change | `lx.setup()` |
+
+### Observers
+
+Auto mode uses these browser APIs:
+
+| API | Purpose |
+|-----|---------|
+| `MutationObserver` | Watch for DOM changes |
+| `ResizeObserver` | Watch for size changes |
+
+## Global Configuration
+
+### `window.lx`
+
+```typescript
+window.lx = {
+  setup(root?: ParentNode, options?: InitOptions): void;
+  update(): void;
+};
+```
+
+### `window.lxAuto`
+
+```typescript
+window.lxAuto = {
+  requestRelayout(): void;
+  scanForRangeSizeElements(): void;
+  destroy(): void;
+};
+```
+
+## Performance Considerations
+
+### Large Documents
+
+For documents with many `lx` elements:
+
+1. Use `lx-auto.min.js` only where needed
+2. Avoid excessive DOM mutations
+3. Batch attribute changes before calling `update()`
+
+### Range Size Elements
+
+Range size elements require `getBoundingClientRect()` calls, which trigger layout recalculation. Minimize the number of range size elements for better performance.
+
+### Update Frequency
+
+Avoid calling `update()` too frequently. For responsive layouts, consider debouncing:
+
+```javascript
+let resizeTimeout;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    lx.update();
+  }, 100);
+});
+```
+
+## Browser Support
+
+LX requires:
+- Modern browser with ES2020 support
+- `MutationObserver` API
+- `ResizeObserver` API
+- `getBoundingClientRect()` support
+
+Tested in:
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+
+## Debug Output Format
+
+When debug mode is enabled, LX logs structured tables to the console:
+
+### Canonical Nodes
+
+```
+┌─────────┬──────────┬───────────┬───────────┬────────┬─────────┐
+│ id      │ left     │ right     │ top       │ bottom │ width   │
+├─────────┼──────────┼───────────┼───────────┼────────┼─────────┤
+│ header  │ body.l+0 │ body.r+0  │ body.t+0  │ null   │ null    │
+│ sidebar │ body.l+0 │ null      │ null      │ body.b │ 200     │
+└─────────┴──────────┴───────────┴───────────┴────────┴─────────┘
+```
+
+### Dependency Order
+
+```
+#header → #sidebar → #content
+```
+
+### Resolved Boxes
+
+```
+#header: { left: 0, top: 0, right: 800, bottom: 60, width: 800, height: 60 }
+#sidebar: { left: 0, top: 80, right: 200, bottom: 600, width: 200, height: 520 }
+```
+
+## Next Steps
+
+- [Core API](/reference/core-api/) - API reference
+- [TypeScript Definitions](/reference/types/) - Complete type definitions

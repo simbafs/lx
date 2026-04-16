@@ -1,0 +1,253 @@
+---
+title: TypeScript Definitions
+description: Complete TypeScript type definitions for LX
+---
+
+## Core Types
+
+### InitOptions
+
+```typescript
+export interface InitOptions {
+  debug?: boolean;
+}
+```
+
+Configuration options for `setup()`.
+
+### Edge
+
+```typescript
+export type Edge = 'left' | 'right' | 'top' | 'bottom';
+```
+
+The four edges of an element's bounding box.
+
+### PositionExpr
+
+```typescript
+export interface BodyPositionExpr {
+  type: 'body-ref';
+  edge: Edge;
+  offset: number;
+  raw: string;
+}
+
+export interface ElementPositionExpr {
+  type: 'element-ref';
+  targetId: string;
+  edge: Edge;
+  offset: number;
+  raw: string;
+}
+
+export type PositionExpr = BodyPositionExpr | ElementPositionExpr;
+```
+
+Parsed position expressions from `lx-left`, `lx-right`, `lx-top`, `lx-bottom` attributes.
+
+**Example parsed values:**
+
+```typescript
+// "body.left+20" → BodyPositionExpr
+{ type: 'body-ref', edge: 'left', offset: 20, raw: 'body.left+20' }
+
+// "#header.top" → ElementPositionExpr
+{ type: 'element-ref', targetId: 'header', edge: 'top', offset: 0, raw: '#header.top' }
+
+// "#box.bottom-10" → ElementPositionExpr
+{ type: 'element-ref', targetId: 'box', edge: 'bottom', offset: -10, raw: '#box.bottom-10' }
+```
+
+### SizeExpr
+
+```typescript
+export interface FixedSizeExpr {
+  type: 'fixed';
+  value: number;
+  raw: string;
+}
+
+export interface RangeSizeExpr {
+  type: 'range';
+  min: number;
+  max: number;
+  raw: string;
+}
+
+export type SizeExpr = FixedSizeExpr | RangeSizeExpr;
+```
+
+Parsed size expressions from `lx-width`, `lx-height` attributes.
+
+**Example parsed values:**
+
+```typescript
+// "300" → FixedSizeExpr
+{ type: 'fixed', value: 300, raw: '300' }
+
+// "200/500" → RangeSizeExpr
+{ type: 'range', min: 200, max: 500, raw: '200/500' }
+```
+
+### AspectExpr
+
+```typescript
+export interface AspectExpr {
+  type: 'aspect';
+  width: number;
+  height: number;
+  ratio: number;
+  raw: string;
+}
+```
+
+Parsed aspect ratio from `lx-aspect` attribute.
+
+**Example parsed values:**
+
+```typescript
+// "16:9" → AspectExpr
+{ type: 'aspect', width: 16, height: 9, ratio: 16/9, raw: '16:9' }
+
+// "1:1" → AspectExpr
+{ type: 'aspect', width: 1, height: 1, ratio: 1, raw: '1:1' }
+```
+
+### ResolvedBox
+
+```typescript
+export interface ResolvedBox {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  width: number;
+  height: number;
+}
+```
+
+Final calculated coordinates for an element (viewport-absolute).
+
+### CanonicalNode
+
+```typescript
+export interface CanonicalAttr {
+  value: string;
+  originalAttr: string;
+}
+
+export interface CanonicalAttrMap {
+  left?: CanonicalAttr;
+  right?: CanonicalAttr;
+  top?: CanonicalAttr;
+  bottom?: CanonicalAttr;
+  width?: CanonicalAttr;
+  height?: CanonicalAttr;
+}
+
+export interface CanonicalNode {
+  id: string;
+  el: HTMLElement;
+  left: PositionExpr | null;
+  right: PositionExpr | null;
+  top: PositionExpr | null;
+  bottom: PositionExpr | null;
+  width: SizeExpr | null;
+  height: SizeExpr | null;
+  aspect: AspectExpr | null;
+  refs: Set<string>;
+  resolved: ResolvedBox | null;
+  canonicalAttrs: CanonicalAttrMap;
+}
+```
+
+Internal representation of a parsed element with all constraints.
+
+## Constants
+
+### Position Attributes
+
+```typescript
+export const POSITION_ATTRS = ['lx-left', 'lx-right', 'lx-top', 'lx-bottom'] as const;
+
+export type PositionAttrName = 'lx-left' | 'lx-right' | 'lx-top' | 'lx-bottom';
+```
+
+### Size Attributes
+
+```typescript
+export const SIZE_ATTRS = ['lx-width', 'lx-height'] as const;
+
+export type SizeAttrName = 'lx-width' | 'lx-height';
+```
+
+### Aspect Attribute
+
+```typescript
+export const ASPECT_ATTR = 'lx-aspect' as const;
+```
+
+### All Attributes
+
+```typescript
+export const ALL_ATTRS: string[] = [...POSITION_ATTRS, ...SIZE_ATTRS, ASPECT_ATTR];
+```
+
+### Attribute Aliases
+
+```typescript
+export const ATTR_ALIASES: Readonly<Record<string, string>> = Object.freeze({
+  'lx-l': 'lx-left',
+  'lx-r': 'lx-right',
+  'lx-t': 'lx-top',
+  'lx-b': 'lx-bottom',
+  'lx-w': 'lx-width',
+  'lx-h': 'lx-height',
+  'lx-a': 'lx-aspect',
+});
+```
+
+## Regular Expressions
+
+Internal regex patterns for parsing (exposed for debugging/validation):
+
+```typescript
+export const POSITION_RE = /^(body|#([A-Za-z_][\w\-:.]*))\.(left|right|top|bottom)([+-]\d+(?:\.\d+)?)?$/;
+
+export const RELATIVE_POSITION_RE = /^(previous|next)\.(left|right|top|bottom)([+-]\d+(?:\.\d+)?)?$/;
+
+export const FIXED_SIZE_RE = /^-?\d+(?:\.\d+)?$/;
+
+export const RANGE_SIZE_RE = /^(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/;
+
+export const ASPECT_RE = /^(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/;
+
+export const EXPRESSION_RE = /^\(([^()]+)\)$/;
+
+export const POSITION_EXPR_RE = /^(body|#([A-Za-z_][\w\-:.]*))\.(left|right|top|bottom)([+-])(\(.+\))$/;
+
+export const VARIABLE_RE = /^\{([A-Za-z_][\w]*)\}$/;
+
+export const MATH_TOKEN_RE = /(-?\d+(?:\.\d+)?|\{[^}]+\}|[+\-*/])/;
+```
+
+## Internal Data Structures
+
+### containerOrderedIds
+
+```typescript
+containerOrderedIds: Map<string, string[]>
+```
+
+Maps container ID to ordered list of child element IDs.
+
+- Key: `'body'` or `'#id'`
+- Value: Array of child element IDs in DOM order
+
+Used for resolving `previous`/`next` relative selectors.
+
+## Next Steps
+
+- [Core API](/reference/core-api/) - Public API reference
+- [Configuration Reference](/reference/configuration/) - Configuration options

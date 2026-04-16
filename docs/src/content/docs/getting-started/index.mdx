@@ -1,0 +1,84 @@
+---
+title: Introduction
+description: What is LX and why should you use it?
+---
+
+import LXPreview from '../../../components/LXPreview.astro'
+
+## What is LX?
+
+LX is a **declarative layout syntax** that describes geometric relationships between HTML elements using HTML attributes. Instead of specifying concrete pixel values, you describe _how elements relate to each other_.
+
+## Core Principles
+
+### 1. Geometry First
+
+Describe "how far this element is from that element" instead of "this element is at 100px":
+
+<LXPreview
+	code={`
+  <div
+	  id="box"
+	  lx-left="body.left+20"
+	  lx-right="body.right-20"
+	  lx-top="body.top+30"
+	  lx-bottom="body.bottom-30"
+  >
+	  Box
+  </div>
+`}
+/>
+
+### 2. Auto-inference
+
+The system automatically calculates missing information based on known constraints:
+
+<LXPreview
+	code={`
+	<div
+		id="box"
+		lx-left="20"
+		lx-width="100"
+		lx-top="30"
+		lx-height="50"
+	></div>
+`}
+/>
+
+- Left and top are inferred as container boundaries
+- Right is calculated from left + width
+- Bottom is calculated from top + height
+
+### 3. Zero Runtime Dependencies
+
+Pure Vanilla JavaScript. No build tools, no framework dependencies.
+
+## Quick Comparison
+
+| Feature      | CSS                           | LX                         |
+| ------------ | ----------------------------- | -------------------------- |
+| Positioning  | Manual coordinate calculation | Declarative relationships  |
+| Responsive   | Media queries                 | Variables + expressions    |
+| Dependencies | Manual ordering               | Automatic topological sort |
+| Updates      | Manual DOM manipulation       | Call `lx.update()`         |
+
+## When to Use LX
+
+LX is ideal for:
+
+- **Dashboard layouts** with fixed header, sidebar, and content areas
+- **Card grids** with consistent spacing and aspect ratios
+- **Form layouts** with precise label-input alignment
+- **Any layout where elements depend on each other's positions**
+
+LX may not be the best choice for:
+
+- Highly fluid layouts that need to reflow naturally
+- Complex grids with variable column spans
+- Animations or transitions between states
+
+## Next Steps
+
+- [Installation](/getting-started/installation/) - Get started in 30 seconds
+- [Core Concepts](/getting-started/core-concepts/) - Understand the fundamentals
+- [Basic Syntax](/guides/basic-syntax/) - Learn the syntax

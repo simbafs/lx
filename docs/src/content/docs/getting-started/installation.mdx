@@ -1,0 +1,120 @@
+---
+title: Installation
+description: How to install and set up LX in your project
+---
+
+## CDN (Recommended for Prototyping)
+
+The fastest way to get started. Add a single script tag:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@simbafs/lx/dist/lx.min.js"></script>
+```
+
+For automatic layout updates (recommended for most use cases):
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@simbafs/lx/dist/lx-auto.min.js"></script>
+```
+
+## npm
+
+Install as a dependency:
+
+```bash
+pnpm add @simbafs/lx
+```
+
+Import in your JavaScript/TypeScript:
+
+```typescript
+import '@simbafs/lx';
+```
+
+Or import only the API:
+
+```typescript
+import { setup, update } from '@simbafs/lx';
+```
+
+## Basic Usage
+
+Add `lx-*` attributes to HTML elements to describe layout:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/@simbafs/lx/dist/lx-auto.min.js"></script>
+</head>
+<body style="margin: 0;">
+  <div
+    id="header"
+    lx-l="0"
+    lx-r="0"
+    lx-t="0"
+    lx-h="60"
+    style="background: #3498db; color: white;"
+  >
+    Header
+  </div>
+
+  <div
+    id="sidebar"
+    lx-l="0"
+    lx-w="200"
+    lx-t="previous.bottom+20"
+    lx-b="0"
+    style="background: #2ecc71; color: white;"
+  >
+    Sidebar
+  </div>
+
+  <div
+    id="main"
+    lx-l="previous.right+20"
+    lx-r="0"
+    lx-t="header.bottom+20"
+    lx-b="0"
+    style="background: #fff;"
+  >
+    Main Content
+  </div>
+</body>
+</html>
+```
+
+## Requirements
+
+- All elements using `lx-*` attributes **must have an `id`**
+- If an element should serve as a reference container for children, add the `lx` attribute
+- Modern browser with JavaScript enabled
+
+## Debug Mode
+
+Add `?lx-debug` to the URL to see debug information:
+
+```html
+<script src="lx-auto.min.js"></script>
+<!-- Open http://example.com/?lx-debug -->
+```
+
+Debug output shows:
+- Parsed nodes table
+- Dependency order
+- Resolved coordinates
+- Applied CSS
+
+## CDN vs npm
+
+| | CDN | npm |
+|---|-----|-----|
+| Setup time | 30 seconds | 5 minutes |
+| Auto-updates | `lx-auto.min.js` included | Manual `lx.update()` |
+| Build step | Not required | Optional bundler |
+| Best for | Prototyping, simple sites | Production apps |
+
+## Next Steps
+
+- [Core Concepts](/getting-started/core-concepts/) - Understand how LX works
+- [Basic Syntax](/guides/basic-syntax/) - Start writing layouts
