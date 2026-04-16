@@ -273,15 +273,56 @@ export function expandSugarToCanonical(
 	const positionEdges = ['left', 'right', 'top', 'bottom']
 
 	const expandRelativePosition = (value: string, _edge: string): string | null => {
+		const RELATIVE_POS_EXPR_RE = /^(previous|next)\.(left|right|top|bottom)([+-])(\(.+\))$/
 		const match = value.match(RELATIVE_POSITION_RE)
-		if (!match) return null
-
-		const keyword = match[1]
-		const targetEdge = match[2]
-		const offset = match[3] ? Number(match[3]) : 0
+		const exprMatch = value.match(RELATIVE_POS_EXPR_RE)
 
 		const containerId = findNearestLxAncestor(el, containerIds)
 		const orderedIds = containerOrderedIds.get(containerId) || []
+
+		let keyword: string, targetEdge: string, targetId: string
+
+		if (exprMatch) {
+			keyword = exprMatch[1]
+			targetEdge = exprMatch[2]
+			const sign = exprMatch[3]
+			const rawExpr = exprMatch[4]
+
+			if (orderedIds.length === 0) {
+				throw new Error(`[lx] ${describeEl(el)} cannot use "${keyword}" - container has no elements.`)
+			}
+
+			const currentIndex = orderedIds.indexOf(el.id)
+			let targetIndex
+
+			if (keyword === 'previous') {
+				targetIndex = currentIndex - 1
+				if (targetIndex < 0) {
+					throw new Error(`[lx] ${describeEl(el)} is the first element in container "${containerId}" and cannot use "previous".`)
+				}
+			} else {
+				targetIndex = currentIndex + 1
+				if (targetIndex >= orderedIds.length) {
+					throw new Error(`[lx] ${describeEl(el)} is the last element in container "${containerId}" and cannot use "next".`)
+				}
+			}
+
+			targetId = orderedIds[targetIndex]
+
+			const exprInnerMatch = rawExpr.match(EXPRESSION_RE)
+			if (!exprInnerMatch) return null
+			const evaluated = evaluateMath(exprInnerMatch[1], el)
+			const finalValue = sign === '-' ? -evaluated : evaluated
+			const signStr = finalValue >= 0 ? '+' : ''
+
+			return `#${targetId}.${targetEdge}${signStr}${finalValue}`
+		}
+
+		if (!match) return null
+
+		keyword = match[1]
+		targetEdge = match[2]
+		const offset = match[3] ? Number(match[3]) : 0
 
 		if (orderedIds.length === 0) {
 			throw new Error(`[lx] ${describeEl(el)} cannot use "${keyword}" - container has no elements.`)
@@ -302,7 +343,7 @@ export function expandSugarToCanonical(
 			}
 		}
 
-		const targetId = orderedIds[targetIndex]
+		targetId = orderedIds[targetIndex]
 		const sign = offset >= 0 ? '+' : ''
 		return `#${targetId}.${targetEdge}${sign}${offset}`
 	}

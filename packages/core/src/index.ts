@@ -25,7 +25,7 @@ let cachedDebug = false
 export function setup(root: ParentNode = document.body, options: InitOptions = {}): void {
 	cachedDebug = Boolean(options.debug)
 
-	const { nodes, containerOrderedIds } = collectNodes(root)
+	const { nodes } = collectNodes(root)
 	cachedNodesMap = nodes
 
 	validateNodes(cachedNodesMap)

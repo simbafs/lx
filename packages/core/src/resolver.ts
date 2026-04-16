@@ -1,6 +1,5 @@
 import {
 	CanonicalNode,
-	Edge,
 	PositionExpr,
 	ResolvedBox,
 } from './types'

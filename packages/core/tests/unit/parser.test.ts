@@ -252,4 +252,37 @@ describe('expandSugarToCanonical', () => {
 		const result = expandSugarToCanonical(target, new Set(['container']), new Map(), new Map())
 		expect(result.bottom?.value).toBe('#target.top+10')
 	})
+
+	it('should expand previous.right+({gap}) with relative position and expression', () => {
+		const sibling = document.createElement('div')
+		sibling.id = 'sibling'
+		container.appendChild(sibling)
+
+		target.setAttribute('lx-t', 'previous.bottom+({gap})')
+		const containerOrderedIds = new Map([['container', ['sibling', 'target']]])
+		const result = expandSugarToCanonical(target, new Set(['container']), containerOrderedIds, new Map())
+		expect(result.top?.value).toBe('#sibling.bottom+25')
+	})
+
+	it('should expand previous.right-({gap}) with relative position and negative expression', () => {
+		const sibling = document.createElement('div')
+		sibling.id = 'sibling'
+		container.appendChild(sibling)
+
+		target.setAttribute('lx-t', 'previous.bottom-({gap})')
+		const containerOrderedIds = new Map([['container', ['sibling', 'target']]])
+		const result = expandSugarToCanonical(target, new Set(['container']), containerOrderedIds, new Map())
+		expect(result.top?.value).toBe('#sibling.bottom-25')
+	})
+
+	it('should expand next.right+({gap}) with relative position and expression', () => {
+		const sibling = document.createElement('div')
+		sibling.id = 'sibling'
+		container.appendChild(sibling)
+
+		sibling.setAttribute('lx-t', 'next.bottom+({gap})')
+		const containerOrderedIds = new Map([['container', ['sibling', 'target']]])
+		const result = expandSugarToCanonical(sibling, new Set(['container']), containerOrderedIds, new Map())
+		expect(result.top?.value).toBe('#target.bottom+25')
+	})
 })

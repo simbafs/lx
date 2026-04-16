@@ -15,43 +15,46 @@ LX is a **declarative layout syntax** that describes geometric relationships bet
 
 Describe "how far this element is from that element" instead of "this element is at 100px":
 
-<LXPreview
-	code={`
-  <div
-	  id="box"
-	  lx-left="body.left+20"
-	  lx-right="body.right-20"
-	  lx-top="body.top+30"
-	  lx-bottom="body.bottom-30"
-  >
-	  Box
-  </div>
-`}
-/>
-
 ### 2. Auto-inference
 
 The system automatically calculates missing information based on known constraints:
 
-<LXPreview
-	code={`
-	<div
-		id="box"
-		lx-left="20"
-		lx-width="100"
-		lx-top="30"
-		lx-height="50"
-	></div>
-`}
-/>
-
-- Left and top are inferred as container boundaries
-- Right is calculated from left + width
-- Bottom is calculated from top + height
-
 ### 3. Zero Runtime Dependencies
 
 Pure Vanilla JavaScript. No build tools, no framework dependencies.
+
+<LXPreview
+	code={`
+  <div id="app" lx lx-top="20" lx-left="20" lx-right="-20" lx-bottom="-20" data-lx-gap="20" data-lx-sidebarWidth="160">
+    <div id="header"
+      lx-left="({gap})"
+      lx-right="(-{gap})"
+      lx-top="({gap})"
+      lx-height="60"
+    >Header</div>
+
+    <div id="sidebar"
+      lx-left="#header.left"
+      lx-width="({sidebarWidth})"
+      lx-top="previous.bottom+({gap})"
+      lx-bottom="(-{gap})"
+    >Sidebar</div>
+
+    <div id="stage"
+      lx-top="previous.top"
+      lx-bottom="next.top-({gap})"
+      lx-left="previous.right+({gap})"
+      lx-aspect="16:9"
+    >16:9 Stage (Aspect Ratio)</div>
+
+    <div id="footer"
+      lx-left="#sidebar.right+({gap})"
+      lx-right="0"
+      lx-bottom="0"
+      lx-height="60"
+    >Footer</div>
+  </div>
+`} />
 
 ## Quick Comparison
 

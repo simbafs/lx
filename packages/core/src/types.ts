@@ -69,6 +69,7 @@ export interface CanonicalAttrMap {
 	bottom?: CanonicalAttr
 	width?: CanonicalAttr
 	height?: CanonicalAttr
+	aspect?: CanonicalAttr
 }
 
 export interface CanonicalNode {

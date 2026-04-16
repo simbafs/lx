@@ -19,7 +19,35 @@
 		}
 		</style>
 	</head>
-	<body data-lx-gap="25" data-lx-scale=">
-		<!-- code here -->
+	<body>
+		<div id="app" lx lx-top="20" lx-left="20" lx-right="-20" lx-bottom="-20" data-lx-gap="20" data-lx-sidebarWidth="160">
+    	<div id="header"
+      	lx-left="({gap})"
+      	lx-right="(-{gap})"
+      	lx-top="({gap})"
+      	lx-height="60"
+    	>Header</div>
+
+    	<div id="sidebar"
+      	lx-left="#header.left"
+      	lx-width="({sidebarWidth})"
+      	lx-top="previous.bottom+({gap})"
+      	lx-bottom="(-{gap})"
+    	>Sidebar</div>
+
+    	<div id="stage"
+      	lx-top="previous.top"
+      	lx-bottom="next.top-({gap})"
+      	lx-left="previous.right+({gap})"
+      	lx-aspect="16:9"
+    	>16:9 Stage (Aspect Ratio)</div>
+
+    	<div id="footer"
+    		lx-left="#sidebar.right+({gap})"
+    		lx-right="0"
+    		lx-bottom="0"
+    		lx-height="60"
+    	>Footer</div>
+  	</div>
 	</body>
 </html>
