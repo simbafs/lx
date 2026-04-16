@@ -2,23 +2,27 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
-// https://astro.build/config
 export default defineConfig({
 	integrations: [
 		starlight({
-			title: 'LX Docs',
+			title: 'LX',
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/simbafs/lx' }],
 			sidebar: [
 				{
-					label: 'Guides',
-					items: [
-						// Each item here is one entry in the navigation menu.
-						{ label: 'Example Guide', slug: 'guides/example' },
-					],
+					label: 'Getting Started',
+					link: '/getting-started/',
 				},
 				{
-					label: 'Reference',
-					autogenerate: { directory: 'reference' },
+					label: 'Canonical Syntax',
+					autogenerate: { directory: 'canonical' },
+				},
+				{
+					label: 'Sugar Syntax',
+					autogenerate: { directory: 'sugar' },
+				},
+				{
+					label: 'Examples',
+					autogenerate: { directory: 'examples' },
 				},
 			],
 		}),
