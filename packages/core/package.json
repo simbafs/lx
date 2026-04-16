@@ -1,6 +1,6 @@
 {
   "name": "@simbafs/lx",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "description": "HTML attribute DSL for absolute positioning",
   "type": "module",
   "main": "dist/index.min.js",
