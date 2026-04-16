@@ -2,8 +2,6 @@
 
 `lx` is a lightweight, dependency-free JavaScript layout engine designed to define geometric relationships through HTML attributes and convert them into absolute CSS positioning coordinates. It is particularly suitable for web applications requiring precise positional control, complex dependency chains, or dynamic layout adjustments based on content.
 
-- [中文](./README-zh.md)
-
 ## Key Features
 
 - **Declarative Geometric Syntax**: Directly describe logic such as "my right edge is 10px from the left edge of Element A" in HTML.
