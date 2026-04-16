@@ -27,7 +27,7 @@ Download `lx.min.js` and `lx-auto.min.js` from the [dist](dist/) folder and incl
 ### Option 3: npm
 
 ```bash
-npm install simbafs/lx
+npm install @simbafs/lx
 ```
 
 ### Basic Example

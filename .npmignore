@@ -12,3 +12,4 @@ playwright.config.ts
 test.html
 tsconfig.json
 build.mjs
+.github/
