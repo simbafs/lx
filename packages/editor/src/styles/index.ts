@@ -87,6 +87,34 @@ export const visualEditorStyles: Record<string, React.CSSProperties> = {
     height: '100%',
     border: 'none',
   },
+  zoomControls: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+  },
+  zoomBtn: {
+    padding: '2px 8px',
+    background: '#3c3c3c',
+    border: '1px solid #555',
+    borderRadius: 3,
+    color: '#ccc',
+    fontSize: 12,
+    cursor: 'pointer',
+  },
+  zoomLevel: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    color: '#999',
+    minWidth: 40,
+    textAlign: 'center',
+    cursor: 'pointer',
+  },
+  canvasWrapper: {
+    transformOrigin: 'top left',
+    overflow: 'auto',
+    width: '100%',
+    height: '100%',
+  },
 }
 
 export const propertyPanelStyles: Record<string, React.CSSProperties> = {

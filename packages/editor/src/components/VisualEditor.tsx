@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from 'react'
+import { useRef, useCallback, useEffect, useState } from 'react'
 import { LxElement, IframeMessage } from '../types'
 import { useIframeMessages } from '../hooks/useIframeMessages'
 import { useSyncToIframe } from '../hooks/useSyncToIframe'
@@ -50,6 +50,19 @@ export default function VisualEditor({
   renderHtmlToIframe,
 }: VisualEditorProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  const [scale, setScale] = useState(() => {
+    const saved = localStorage.getItem('lx-editor-zoom')
+    return saved ? parseFloat(saved) : 1
+  })
+
+  useEffect(() => {
+    localStorage.setItem('lx-editor-zoom', String(scale))
+  }, [scale])
+
+const handleZoom = (delta: number) => {
+    setScale((s) => Math.min(3, Math.max(0.1, s + delta)))
+  }
 
   const sendToIframe = useIframeSender({
     iframeRef,
@@ -105,17 +118,31 @@ export default function VisualEditor({
           {selectedElementId ? `#${selectedElementId}` : ''}
           {hoveredEdge ? `.${hoveredEdge}` : ''}
         </span>
+        <div style={styles.zoomControls}>
+          <button style={styles.zoomBtn} onClick={() => handleZoom(-0.1)}>−</button>
+          <span style={styles.zoomLevel} onClick={() => setScale(1)}>{Math.round(scale * 100)}%</span>
+          <button style={styles.zoomBtn} onClick={() => handleZoom(0.1)}>+</button>
+        </div>
         <button style={styles.addBtn} onClick={handleAddNewElement}>
           + Add Element
         </button>
       </div>
       <div style={styles.canvas}>
-        <iframe
-          ref={iframeRef}
-          src="/preview.html"
-          style={styles.iframe}
-          sandbox="allow-scripts allow-same-origin"
-        />
+        <div
+          style={{
+            ...styles.canvasWrapper,
+            transform: `scale(${scale})`,
+            width: `${100 / scale}%`,
+            height: `${100 / scale}%`,
+          }}
+        >
+          <iframe
+            ref={iframeRef}
+            src="/preview.html"
+            style={styles.iframe}
+            sandbox="allow-scripts allow-same-origin"
+          />
+        </div>
       </div>
     </div>
   )
