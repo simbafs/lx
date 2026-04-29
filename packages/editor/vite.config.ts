@@ -9,4 +9,5 @@ export default defineConfig({
       '@simbafs/lx': path.resolve(__dirname, '../core/src'),
     },
   },
+  publicDir: 'public',
 })

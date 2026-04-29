@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LX Preview</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      font-family: sans-serif;
+      background: #f5f5f5;
+    }
+    [lx] {
+      background-color: rgba(255, 180, 0, 0.08);
+      border: 1px dashed rgba(0, 0, 0, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      color: #666;
+      box-sizing: border-box;
+    }
+    [lx]:hover {
+      background-color: rgba(255, 180, 0, 0.15);
+    }
+    [lx].selected {
+      border: 2px solid #007acc;
+      background-color: rgba(0, 122, 204, 0.2);
+    }
+    [lx-aspect-disabled] {
+      opacity: 0.6;
+    }
+    [lx-aspect-disabled]::after {
+      content: '🔒';
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      font-size: 12px;
+    }
+    .handle {
+      position: absolute;
+      background: transparent;
+      z-index: 10;
+    }
+    .handle.handle-top {
+      top: 0; left: 8px; right: 8px; height: 10px;
+      cursor: ns-resize;
+    }
+    .handle.handle-bottom {
+      bottom: 0; left: 8px; right: 8px; height: 10px;
+      cursor: ns-resize;
+    }
+    .handle.handle-left {
+      top: 8px; bottom: 8px; left: 0; width: 10px;
+      cursor: ew-resize;
+    }
+    .handle.handle-right {
+      top: 8px; bottom: 8px; right: 0; width: 10px;
+      cursor: ew-resize;
+    }
+    .handle.handle-tl { top: 0; left: 0; width: 16px; height: 16px; cursor: nwse-resize; }
+    .handle.handle-tr { top: 0; right: 0; width: 16px; height: 16px; cursor: nesw-resize; }
+    .handle.handle-bl { bottom: 0; left: 0; width: 16px; height: 16px; cursor: nesw-resize; }
+    .handle.handle-br { bottom: 0; right: 0; width: 16px; height: 16px; cursor: nwse-resize; }
+    .handle:hover {
+      background: rgba(0, 122, 204, 0.3);
+    }
+    .handle.disabled {
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="lx-preview-root"></div>
+
+  <script src="/lx.min.js"></script>
+  <script>
+    const { setup, update } = window.lx;
+
+    const container = document.getElementById('lx-preview-root');
+
+    window.addEventListener('message', async (event) => {
+      const { type, html } = event.data;
+      if (type === 'render') {
+        render(html);
+      }
+    });
+
+    function render(html) {
+      container.innerHTML = html;
+      
+      const styleEl = document.createElement('style');
+      styleEl.textContent = `
+        [lx] {
+          background-color: rgba(255, 180, 0, 0.08);
+          border: 1px dashed rgba(0, 0, 0, 0.25);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1rem;
+          font-family: sans-serif;
+          color: #666;
+          box-sizing: border-box;
+        }
+        [lx]:hover {
+          background-color: rgba(255, 180, 0, 0.15);
+        }
+        [lx].selected {
+          border: 2px solid #007acc;
+          background-color: rgba(0, 122, 204, 0.2);
+        }
+        [lx-aspect-disabled] {
+          opacity: 0.6;
+        }
+        [lx-aspect-disabled]::after {
+          content: '🔒';
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          font-size: 12px;
+        }
+        .handle {
+          position: absolute;
+          background: transparent;
+          z-index: 10;
+        }
+        .handle.handle-top { top: 0; left: 8px; right: 8px; height: 10px; cursor: ns-resize; }
+        .handle.handle-bottom { bottom: 0; left: 8px; right: 8px; height: 10px; cursor: ns-resize; }
+        .handle.handle-left { top: 8px; bottom: 8px; left: 0; width: 10px; cursor: ew-resize; }
+        .handle.handle-right { top: 8px; bottom: 8px; right: 0; width: 10px; cursor: ew-resize; }
+        .handle.handle-tl { top: 0; left: 0; width: 16px; height: 16px; cursor: nwse-resize; }
+        .handle.handle-tr { top: 0; right: 0; width: 16px; height: 16px; cursor: nesw-resize; }
+        .handle.handle-bl { bottom: 0; left: 0; width: 16px; height: 16px; cursor: nesw-resize; }
+        .handle.handle-br { bottom: 0; right: 0; width: 16px; height: 16px; cursor: nwse-resize; }
+        .handle:hover { background: rgba(0, 122, 204, 0.3); }
+        .handle.disabled { cursor: not-allowed; pointer-events: none; }
+      `;
+      container.prepend(styleEl);
+
+      window.lx.setup(container, { debug: false });
+
+      attachEventListeners();
+    }
+
+    function attachEventListeners() {
+      const elements = container.querySelectorAll('[lx]');
+      
+      elements.forEach(el => {
+        const hasAspect = el.hasAttribute('lx-aspect') || el.getAttribute('lx-aspect');
+        
+        if (hasAspect) {
+          el.setAttribute('lx-aspect-disabled', '');
+        }
+
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          parent.postMessage({ type: 'elementClick', elementId: el.id }, '*');
+        });
+
+        el.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          const rect = el.getBoundingClientRect();
+          parent.postMessage({ 
+            type: 'openPropertyEditor', 
+            elementId: el.id,
+            x: rect.left,
+            y: rect.top
+          }, '*');
+        });
+
+        attachHandleDrag(el, hasAspect);
+      });
+    }
+
+    function attachHandleDrag(el, hasAspect) {
+      const handles = [
+        { edge: 'top', class: 'handle-top' },
+        { edge: 'bottom', class: 'handle-bottom' },
+        { edge: 'left', class: 'handle-left' },
+        { edge: 'right', class: 'handle-right' },
+        { edge: 'tl', class: 'handle-tl' },
+        { edge: 'tr', class: 'handle-tr' },
+        { edge: 'bl', class: 'handle-bl' },
+        { edge: 'br', class: 'handle-br' },
+      ];
+
+      handles.forEach(({ edge, class: className }) => {
+        const handle = document.createElement('div');
+        handle.className = `handle ${className}${hasAspect ? ' disabled' : ''}`;
+        handle.dataset.edge = edge;
+        
+        handle.addEventListener('mousedown', (e) => {
+          console.log('[preview] mousedown:', { elementId: el.id, edge, hasAspect });
+          if (hasAspect) return;
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const startX = e.clientX;
+          const startY = e.clientY;
+          
+          console.log('[preview] posting dragStart:', { elementId: el.id, edge, startX, startY });
+          parent.postMessage({ 
+            type: 'dragStart', 
+            elementId: el.id, 
+            edge,
+            startX,
+            startY 
+          }, '*');
+
+          const onMouseMove = (e) => {
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            parent.postMessage({ 
+              type: 'drag', 
+              elementId: el.id, 
+              edge,
+              deltaX,
+              deltaY 
+            }, '*');
+          };
+
+          const onMouseUp = (e) => {
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            console.log('[preview] posting dragEnd:', { elementId: el.id, edge, deltaX, deltaY });
+            parent.postMessage({ 
+              type: 'dragEnd', 
+              elementId: el.id, 
+              edge,
+              deltaX,
+              deltaY 
+            }, '*');
+            
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+          };
+
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        });
+
+        el.appendChild(handle);
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,7 +1,5 @@
-import { useCallback, useRef, useState, useEffect } from 'react'
+import { useCallback, useRef, useEffect, useState } from 'react'
 import { LxElement } from '../types'
-import { setup, update } from '@simbafs/lx'
-import { serializeToHtml } from '../utils/htmlParser'
 
 interface VisualEditorProps {
   elements: LxElement[]
@@ -14,112 +12,113 @@ interface VisualEditorProps {
     x: number,
     y: number,
   ) => void
-  onUpdateElements: (elements: LxElement[]) => void
-}
-
-interface DragState {
-  elementId: string
-  startX: number
-  startY: number
+  onOpenPropertyEditor: (elementId: string, x: number, y: number) => void
+  onDragStart: (
+    elementId: string,
+    edge: string,
+    startX: number,
+    startY: number,
+  ) => void
+  onDrag: (
+    elementId: string,
+    edge: string,
+    deltaX: number,
+    deltaY: number,
+  ) => void
+  onDragEnd: (
+    elementId: string,
+    edge: string,
+    deltaX: number,
+    deltaY: number,
+  ) => void
 }
 
 export default function VisualEditor({
   elements,
-  selectedElementId: _selectedElementId,
+  selectedElementId,
   onSelectElement,
   onAddElement,
-  onOpenPositionPicker,
-  onUpdateElements: _onUpdateElements,
+  onOpenPositionPicker: _onOpenPositionPicker,
+  onOpenPropertyEditor,
+  onDragStart,
+  onDrag,
+  onDragEnd,
 }: VisualEditorProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
-  const [dragState, setDragState] = useState<DragState | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [dragState, setDragState] = useState<{ edge: string } | null>(null)
 
   useEffect(() => {
-    if (!contentRef.current || elements.length === 0) return
+    const handleMessage = (event: MessageEvent) => {
+      const { type, elementId, x, y, edge, startX, startY, deltaX, deltaY } = event.data
 
-    const content = contentRef.current
-    const html = serializeToHtml(elements)
+      console.log('[VisualEditor] message:', { type, elementId, edge, startX, startY, deltaX, deltaY })
 
-    content.innerHTML = html
-
-    const styleEl = document.createElement('style')
-    styleEl.textContent = `
-      [lx] {
-        background-color: rgba(255, 180, 0, 0.08);
-        border: 1px dashed rgba(0, 0, 0, 0.25);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        font-family: sans-serif;
-        box-sizing: border-box;
+      switch (type) {
+        case 'elementClick':
+          onSelectElement(elementId)
+          break
+        case 'openPropertyEditor':
+          onOpenPropertyEditor(elementId, x, y)
+          break
+        case 'dragStart':
+          setDragState({ edge })
+          console.log('[VisualEditor] calling onDragStart:', { elementId, edge, startX, startY })
+          onDragStart(elementId, edge, startX, startY)
+          break
+        case 'drag':
+          console.log('[VisualEditor] calling onDrag:', { elementId, edge, deltaX, deltaY })
+          onDrag(elementId, edge, deltaX, deltaY)
+          break
+        case 'dragEnd':
+          setDragState(null)
+          console.log('[VisualEditor] calling onDragEnd:', { elementId, edge, deltaX, deltaY })
+          onDragEnd(elementId, edge, deltaX, deltaY)
+          break
       }
-      [lx]:hover {
-        background-color: rgba(255, 180, 0, 0.15);
-        border: 1px dashed rgba(255, 180, 0, 0.8);
-      }
-    `
-    content.prepend(styleEl)
-
-    try {
-      setup(content, { debug: false })
-    } catch (e) {
-      console.warn('[lx-editor] setup error:', e)
     }
-  }, [elements])
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [onSelectElement, onOpenPropertyEditor, onDragStart, onDrag, onDragEnd])
 
   useEffect(() => {
-    if (!contentRef.current) return
+    if (!iframeRef.current) return
 
-    try {
-      update()
-    } catch (e) {
-      console.warn('[lx-editor] update error:', e)
-    }
+    const html = generateHtml(elements)
+    iframeRef.current.contentWindow?.postMessage({ type: 'render', html }, '*')
   }, [elements])
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      if (!dragState) return
+  const generateHtml = (elements: LxElement[]): string => {
+    const lxElements = elements.filter(el => el.attrs['lx'] !== undefined)
+    
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #f5f5f5; }
+  </style>
+</head>
+<body>
+${serializeElements(lxElements)}
+</body>
+</html>`
+  }
 
-      const rect = contentRef.current?.getBoundingClientRect()
-      if (!rect) return
-
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-
-      onOpenPositionPicker(dragState.elementId, 'lx-left', x, y)
-      setDragState(null)
-    },
-    [dragState, onOpenPositionPicker],
-  )
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-  }, [])
-
-  const handleClick = useCallback(
-    (e: React.MouseEvent, elementId: string) => {
-      e.stopPropagation()
-      onSelectElement(elementId)
-    },
-    [onSelectElement],
-  )
-
-  const handleContentClick = useCallback(
-    (e: React.MouseEvent) => {
-      const target = e.target as HTMLElement
-      const lxElement = target.closest('[lx]')
-      if (lxElement && lxElement.id) {
-        handleClick(e, lxElement.id)
-      } else {
-        onSelectElement(null)
+  const serializeElements = (elements: LxElement[]): string => {
+    return elements.map(el => {
+      const attrs = Object.entries(el.attrs)
+        .map(([k, v]) => `${k}="${v}"`)
+        .join(' ')
+      const idPart = el.id ? ` id="${el.id}"` : ''
+      const text = el.text || ''
+      
+      if (el.children.length > 0) {
+        return `<div${idPart} ${attrs}>\n${serializeElements(el.children)}\n</div>`
       }
-    },
-    [onSelectElement, handleClick],
-  )
+      return `<div${idPart} ${attrs}>${text}</div>`
+    }).join('\n')
+  }
 
   const handleAddNewElement = useCallback(() => {
     const newId = 'el-' + Math.random().toString(36).substring(2, 9)
@@ -139,27 +138,6 @@ export default function VisualEditor({
     onAddElement(null, newEl)
   }, [onAddElement])
 
-  const handleDoubleClick = useCallback(
-    (e: React.MouseEvent) => {
-      const target = e.target as HTMLElement
-      const lxElement = target.closest('[lx]')
-      if (!lxElement) return
-
-      e.stopPropagation()
-      const rect = lxElement.getBoundingClientRect()
-      const containerRect = contentRef.current?.getBoundingClientRect()
-      if (containerRect) {
-        onOpenPositionPicker(
-          lxElement.id,
-          'lx-left',
-          rect.left - containerRect.left,
-          rect.top - containerRect.top,
-        )
-      }
-    },
-    [onOpenPositionPicker],
-  )
-
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -168,17 +146,12 @@ export default function VisualEditor({
           + Add Element
         </button>
       </div>
-      <div
-        ref={containerRef}
-        style={styles.canvas}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-      >
-        <div
-          ref={contentRef}
-          style={styles.body}
-          onClick={handleContentClick}
-          onDoubleClick={handleDoubleClick}
+      <div style={styles.canvas}>
+        <iframe
+          ref={iframeRef}
+          src="/preview.html"
+          style={styles.iframe}
+          sandbox="allow-scripts allow-same-origin"
         />
       </div>
     </div>
@@ -217,13 +190,12 @@ const styles: Record<string, React.CSSProperties> = {
   canvas: {
     flex: 1,
     position: 'relative',
-    overflow: 'auto',
+    overflow: 'hidden',
     background: '#f5f5f5',
   },
-  body: {
-    position: 'relative',
+  iframe: {
     width: '100%',
     height: '100%',
-    minHeight: '100%',
+    border: 'none',
   },
 }
