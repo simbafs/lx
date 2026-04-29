@@ -1,9 +1,10 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import CodeEditor, { CodeEditorRef } from './components/CodeEditor'
 import VisualEditor from './components/VisualEditor'
 import PositionPicker from './components/PositionPicker'
 import PropertyPanel from './components/PropertyPanel'
-import { useLxParser, HtmlSource } from './hooks/useLxParser'
+import { useLxParser } from './hooks/useLxParser'
+import { useMonacoSync } from './hooks/useMonacoSync'
 import { LxElement, Edge } from './types'
 import { extractAllElementIds } from './utils/htmlParser'
 
@@ -42,19 +43,11 @@ const DEFAULT_HTML = `<!doctype html>
 
 export default function App() {
   const { html, elements, updateHtml, currentSource, setCurrentSource } = useLxParser(DEFAULT_HTML)
-  const [selectedElementId, setSelectedElementId] = useState<string | null>(null)
+  const [, setSelectedElementId] = useState<string | null>(null)
   const sendToIframeRef = useRef<((html: string) => void) | null>(null)
   const codeEditorRef = useRef<CodeEditorRef>(null)
-  const isSyncingMonacoRef = useRef(false)
 
-  useEffect(() => {
-    if (currentSource === 'visual' && codeEditorRef.current && !isSyncingMonacoRef.current) {
-      console.log('[App] syncing Monaco with html, source:', currentSource)
-      isSyncingMonacoRef.current = true
-      codeEditorRef.current.setValue(html)
-      isSyncingMonacoRef.current = false
-    }
-  }, [html, currentSource])
+  useMonacoSync({ html, currentSource, codeEditorRef })
 
   const generatePreviewHtml = useCallback((): string => {
     // 從當前 html 狀態中提取 body 內容
@@ -205,19 +198,6 @@ ${bodyContent}
       updateHtml(newHtml)
     },
     [html, updateHtml, setCurrentSource],
-  )
-
-  const handleOpenPositionPicker = useCallback(
-    (elementId: string, positionAttr: string, x: number, y: number) => {
-      setPickerState({
-        isOpen: true,
-        elementId,
-        positionAttr,
-        x,
-        y,
-      })
-    },
-    [],
   )
 
   const handleOpenPropertyEditor = useCallback(
@@ -457,10 +437,8 @@ ${bodyContent}
       <div style={styles.right}>
         <VisualEditor
           elements={elements}
-          selectedElementId={selectedElementId}
           onSelectElement={handleSelectElement}
           onAddElement={handleAddElement}
-          onOpenPositionPicker={handleOpenPositionPicker}
           onOpenPropertyEditor={handleOpenPropertyEditor}
           onDragStart={handleDragStart}
           onDrag={handleDrag}

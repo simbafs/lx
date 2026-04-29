@@ -1,4 +1,4 @@
-import Editor, { type Monaco } from '@monaco-editor/react'
+import Editor from '@monaco-editor/react'
 import { useCallback, useRef, useImperativeHandle, forwardRef } from 'react'
 import type { editor } from 'monaco-editor'
 

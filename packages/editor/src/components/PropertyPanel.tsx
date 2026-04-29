@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
 import { LxElement } from '../types'
+import { useElementAttrs, LX_ATTRS_LIST } from '../hooks/useElementAttrs'
 
 interface PropertyPanelProps {
   isOpen: boolean
@@ -8,38 +8,18 @@ interface PropertyPanelProps {
   onCancel: () => void
 }
 
-const LX_ATTRS = [
-  'lx-left',
-  'lx-right',
-  'lx-top',
-  'lx-bottom',
-  'lx-width',
-  'lx-height',
-  'lx-aspect',
-]
-
 export default function PropertyPanel({
   isOpen,
   element,
   onConfirm,
   onCancel,
 }: PropertyPanelProps) {
-  const [attrs, setAttrs] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-    if (element) {
-      const lxAttrs: Record<string, string> = {}
-      LX_ATTRS.forEach(attr => {
-        lxAttrs[attr] = element.attrs[attr] || ''
-      })
-      setAttrs(lxAttrs)
-    }
-  }, [element])
+  const { attrs, setAttrs } = useElementAttrs(element)
 
   if (!isOpen || !element) return null
 
   const handleChange = (attr: string, value: string) => {
-    setAttrs(prev => ({ ...prev, [attr]: value }))
+    setAttrs(attr, value)
   }
 
   const handleConfirm = () => {
@@ -60,7 +40,7 @@ export default function PropertyPanel({
         </div>
 
         <div style={styles.attrList}>
-          {LX_ATTRS.map(attr => (
+          {LX_ATTRS_LIST.map(attr => (
             <div key={attr} style={styles.field}>
               <label style={styles.label}>{attr}</label>
               <input
