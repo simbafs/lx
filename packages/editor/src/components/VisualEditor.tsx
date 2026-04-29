@@ -1,5 +1,5 @@
-import { useRef, useCallback } from 'react'
-import { LxElement } from '../types'
+import { useRef, useCallback, useEffect } from 'react'
+import { LxElement, IframeMessage } from '../types'
 import { useIframeMessages } from '../hooks/useIframeMessages'
 import { useSyncToIframe } from '../hooks/useSyncToIframe'
 import { useIframeSender } from '../hooks/useIframeSender'
@@ -7,6 +7,8 @@ import { visualEditorStyles as styles } from '../styles'
 
 interface VisualEditorProps {
   elements: LxElement[]
+  selectedElementId: string | null
+  hoveredEdge: string | null
   onSelectElement: (id: string | null) => void
   onAddElement: (parentId: string | null, newEl: LxElement) => void
   onOpenPropertyEditor: (elementId: string, x: number, y: number) => void
@@ -28,17 +30,23 @@ interface VisualEditorProps {
     deltaX: number,
     deltaY: number,
   ) => void
-  renderHtmlToIframe?: (sendFn: (html: string) => void) => void
+  onHandleHover: (elementId: string | null, edge: string | null) => void
+  onCycleElement: (direction: 'next' | 'prev', elements: string[], currentIndex: number) => void
+  renderHtmlToIframe?: (sendFn: (message: IframeMessage) => void) => void
 }
 
 export default function VisualEditor({
   elements,
+  selectedElementId,
+  hoveredEdge,
   onSelectElement,
   onAddElement,
   onOpenPropertyEditor,
   onDragStart,
   onDrag,
   onDragEnd,
+  onHandleHover,
+  onCycleElement,
   renderHtmlToIframe,
 }: VisualEditorProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -55,6 +63,8 @@ export default function VisualEditor({
     onDragStart,
     onDrag,
     onDragEnd,
+    onHandleHover,
+    onCycleElement,
     sendToIframe,
   })
 
@@ -62,6 +72,12 @@ export default function VisualEditor({
     elements,
     sendToIframe,
   })
+
+  useEffect(() => {
+    if (selectedElementId !== null) {
+      sendToIframe({ type: 'updateSelection', elementId: selectedElementId })
+    }
+  }, [selectedElementId, sendToIframe])
 
   const handleAddNewElement = useCallback(() => {
     const newId = 'el-' + Math.random().toString(36).substring(2, 9)
@@ -85,6 +101,10 @@ export default function VisualEditor({
     <div style={styles.container}>
       <div style={styles.header}>
         <span>Visual Editor</span>
+        <span style={styles.statusBar}>
+          {selectedElementId ? `#${selectedElementId}` : ''}
+          {hoveredEdge ? `.${hoveredEdge}` : ''}
+        </span>
         <button style={styles.addBtn} onClick={handleAddNewElement}>
           + Add Element
         </button>

@@ -46,25 +46,32 @@
       position: absolute;
       background: transparent;
       z-index: 10;
+      pointer-events: auto;
     }
     .handle.handle-top {
-      top: 0; left: 8px; right: 8px; height: 10px;
+      top: 0; left: 0; right: 0; height: 10px;
       cursor: ns-resize;
     }
     .handle.handle-bottom {
-      bottom: 0; left: 8px; right: 8px; height: 10px;
+      bottom: 0; left: 0; right: 0; height: 10px;
       cursor: ns-resize;
     }
     .handle.handle-left {
-      top: 8px; bottom: 8px; left: 0; width: 10px;
+      top: 0; bottom: 0; left: 0; width: 10px;
       cursor: ew-resize;
     }
     .handle.handle-right {
-      top: 8px; bottom: 8px; right: 0; width: 10px;
+      top: 0; bottom: 0; right: 0; width: 10px;
       cursor: ew-resize;
     }
     .handle:hover {
       background: rgba(0, 122, 204, 0.3);
+    }
+    .handle.active {
+      background: rgba(0, 122, 204, 0.5) !important;
+    }
+    .handle.overlapping {
+      background: rgba(0, 122, 204, 0.15);
     }
     .handle.disabled {
       cursor: not-allowed;
@@ -80,17 +87,32 @@
     const { setup, update } = window.lx;
 
     const container = document.getElementById('lx-preview-root');
+    let selectedElementId = null;
 
     window.addEventListener('load', () => {
       parent.postMessage({ type: 'ready' }, '*');
     });
 
     window.addEventListener('message', async (event) => {
-      const { type, html } = event.data;
+      const { type, html, elementId } = event.data;
       if (type === 'render') {
         render(html);
+      } else if (type === 'updateSelection') {
+        updateSelection(elementId);
       }
     });
+
+    function updateSelection(elementId) {
+      if (selectedElementId) {
+        const prev = container.querySelector(`#${selectedElementId}`);
+        if (prev) prev.classList.remove('selected');
+      }
+      selectedElementId = elementId;
+      if (elementId) {
+        const el = container.querySelector(`#${elementId}`);
+        if (el) el.classList.add('selected');
+      }
+    }
 
     function render(html) {
       container.innerHTML = html;
@@ -101,7 +123,7 @@
     }
 
     function attachEventListeners() {
-      const elements = container.querySelectorAll('[lx]');
+      const elements = container.querySelectorAll('[lx], [lx-left], [lx-right], [lx-top], [lx-bottom], [lx-width], [lx-height], [lx-aspect], [lx-l], [lx-r], [lx-t], [lx-b], [lx-w], [lx-h], [lx-a]');
       
       elements.forEach(el => {
         const hasAspect = el.hasAttribute('lx-aspect') || el.getAttribute('lx-aspect');
@@ -142,7 +164,96 @@
         const handle = document.createElement('div');
         handle.className = `handle ${className}${hasAspect ? ' disabled' : ''}`;
         handle.dataset.edge = edge;
-        
+        handle.dataset.elementId = el.id;
+
+        handle.addEventListener('mouseenter', () => {
+          parent.postMessage({ type: 'handleHover', elementId: el.id, edge }, '*');
+        });
+
+        handle.addEventListener('mouseleave', () => {
+          parent.postMessage({ type: 'handleHover', elementId: null, edge: null }, '*');
+          const allHandles = document.querySelectorAll('.handle');
+          allHandles.forEach(h => {
+            h.classList.remove('active', 'overlapping');
+          });
+        });
+
+        handle.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const mouseX = e.clientX;
+          const mouseY = e.clientY;
+          const allHandles = document.querySelectorAll('.handle');
+
+          const handleDebug = Array.from(allHandles).map(h => {
+            const rect = h.getBoundingClientRect();
+            const isOverlapping = mouseX >= rect.left && mouseX <= rect.right &&
+                                  mouseY >= rect.top && mouseY <= rect.bottom;
+            return {
+              id: h.dataset.elementId,
+              edge: h.dataset.edge,
+              bounds: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom },
+              isOverlapping
+            };
+          });
+
+          console.log('[preview] mouse position:', { x: mouseX, y: mouseY });
+          console.log('[preview] handles:', handleDebug);
+
+          const overlappingHandles = handleDebug.filter(h => h.isOverlapping);
+
+          // Clear handle classes when there's only 0 or 1 handle under mouse
+          if (overlappingHandles.length <= 1) {
+            allHandles.forEach(h => {
+              h.classList.remove('active', 'overlapping');
+            });
+            return;
+          }
+
+          const elementIdsAtPoint = overlappingHandles.map(h => h.id).filter(id => id);
+
+          const currentIndex = selectedElementId
+            ? elementIdsAtPoint.indexOf(selectedElementId)
+            : elementIdsAtPoint.indexOf(el.id);
+          
+          const validCurrentIndex = currentIndex === -1 ? 0 : currentIndex;
+          let newIndex;
+          if (e.deltaY < 0) {
+            newIndex = (validCurrentIndex + 1) % elementIdsAtPoint.length;
+          } else {
+            newIndex = (validCurrentIndex - 1 + elementIdsAtPoint.length) % elementIdsAtPoint.length;
+          }
+
+          // Mark overlapping handles
+          const newSelectedId = elementIdsAtPoint[newIndex];
+          allHandles.forEach(h => {
+            h.classList.remove('overlapping');
+          });
+          overlappingHandles.forEach(h => {
+            const id = h.id;
+            const handle = Array.from(allHandles).find(ah => 
+              ah.dataset.elementId === id && ah.dataset.edge === h.edge
+            );
+            if (handle) {
+              if (id === newSelectedId) {
+                handle.classList.add('active');
+                handle.classList.remove('overlapping');
+              } else {
+                handle.classList.add('overlapping');
+                handle.classList.remove('active');
+              }
+            }
+          });
+
+          parent.postMessage({ 
+            type: 'cycleElement', 
+            direction: e.deltaY < 0 ? 'next' : 'prev',
+            elements: elementIdsAtPoint,
+            currentIndex: validCurrentIndex
+          }, '*');
+        }, { passive: false });
+
         handle.addEventListener('mousedown', (e) => {
           console.log('[preview] mousedown:', { elementId: el.id, edge, hasAspect });
           if (hasAspect) return;

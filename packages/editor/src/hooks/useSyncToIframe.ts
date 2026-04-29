@@ -1,12 +1,12 @@
 import { useEffect } from 'react'
-import type { LxElement } from '../types'
+import type { LxElement, IframeMessage } from '../types'
 
 export function useSyncToIframe({
   elements,
   sendToIframe,
 }: {
   elements: LxElement[]
-  sendToIframe: (html: string) => void
+  sendToIframe: (message: IframeMessage) => void
 }) {
   useEffect(() => {
     const lxElements = elements.filter(el => el.attrs['lx'] !== undefined)
@@ -27,6 +27,6 @@ export function useSyncToIframe({
     }
 
     const html = serializeElements(lxElements)
-    sendToIframe(html)
+    sendToIframe({ type: 'render', html })
   }, [elements, sendToIframe])
 }

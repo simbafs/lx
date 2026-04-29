@@ -1,14 +1,15 @@
 import { useEffect, useCallback } from 'react'
+import type { IframeMessage } from '../types'
 
 export function useIframeSender({
   iframeRef,
   renderHtmlToIframe,
 }: {
   iframeRef: React.RefObject<HTMLIFrameElement | null>
-  renderHtmlToIframe?: (sendFn: (html: string) => void) => void
+  renderHtmlToIframe?: (sendFn: (message: IframeMessage) => void) => void
 }) {
-  const sendToIframe = useCallback((html: string) => {
-    iframeRef.current?.contentWindow?.postMessage({ type: 'render', html }, '*')
+  const sendToIframe = useCallback((message: IframeMessage) => {
+    iframeRef.current?.contentWindow?.postMessage(message, '*')
   }, [iframeRef])
 
   useEffect(() => {

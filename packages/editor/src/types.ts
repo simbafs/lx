@@ -58,3 +58,8 @@ export interface EditorState {
   selectedElementId: string | null
   pickerState: PositionPickerState
 }
+
+export interface IframeMessage {
+  type: string
+  [key: string]: unknown
+}

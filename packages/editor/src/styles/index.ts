@@ -59,6 +59,14 @@ export const visualEditorStyles: Record<string, React.CSSProperties> = {
     letterSpacing: 0.5,
     borderBottom: '1px solid #333',
   },
+  statusBar: {
+    fontFamily: 'monospace',
+    fontSize: 13,
+    color: '#4fc1ff',
+    background: '#1e1e1e',
+    padding: '4px 8px',
+    borderRadius: 4,
+  },
   addBtn: {
     padding: '4px 12px',
     background: '#007acc',

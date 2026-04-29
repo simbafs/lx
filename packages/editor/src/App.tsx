@@ -6,14 +6,16 @@ import PropertyPanel from './components/PropertyPanel'
 import Layout from './components/Layout'
 import { useLxParser } from './hooks/useLxParser'
 import { useMonacoSync } from './hooks/useMonacoSync'
-import { LxElement, Edge } from './types'
+import { LxElement, Edge, IframeMessage } from './types'
 import { extractAllElementIds } from './utils/htmlParser'
 import { DEFAULT_HTML } from './utils/constants'
 
 export default function App() {
   const { html, elements, updateHtml, currentSource, setCurrentSource } = useLxParser(DEFAULT_HTML)
-  const [, setSelectedElementId] = useState<string | null>(null)
-  const sendToIframeRef = useRef<((html: string) => void) | null>(null)
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null)
+  const [hoveredEdge, setHoveredEdge] = useState<string | null>(null)
+
+const sendToIframeRef = useRef<((message: IframeMessage) => void) | null>(null)
   const codeEditorRef = useRef<CodeEditorRef>(null)
 
   useMonacoSync({ html, currentSource, codeEditorRef })
@@ -125,6 +127,30 @@ ${bodyContent}
   const handleSelectElement = useCallback((id: string | null) => {
     setSelectedElementId(id)
   }, [])
+
+  const handleHandleHover = useCallback((elementId: string | null, edge: string | null) => {
+    if (elementId && edge) {
+      setSelectedElementId(elementId)
+      setHoveredEdge(edge)
+    } else {
+      setHoveredEdge(null)
+    }
+  }, [])
+
+  const handleCycleElement = useCallback(
+    (direction: 'next' | 'prev', elements: string[], currentIndex: number) => {
+      console.log('[App] handleCycleElement:', { direction, elements, currentIndex })
+      let newIndex: number
+      if (direction === 'next') {
+        newIndex = (currentIndex + 1) % elements.length
+      } else {
+        newIndex = (currentIndex - 1 + elements.length) % elements.length
+      }
+      console.log('[App] newIndex:', newIndex, 'new element:', elements[newIndex])
+      setSelectedElementId(elements[newIndex])
+    },
+    [],
+  )
 
   const handleAddElement = useCallback(
     (parentId: string | null, newEl: LxElement) => {
@@ -288,7 +314,7 @@ ${bodyContent}
 
       if (sendToIframeRef.current) {
         const newHtml = generatePreviewHtml()
-        sendToIframeRef.current(newHtml)
+        sendToIframeRef.current({ type: 'render', html: newHtml })
       }
     },
     [dragInfo, getElementById, updateElementAttr, generatePreviewHtml],
@@ -383,7 +409,7 @@ ${bodyContent}
       if (sendToIframeRef.current) {
         const newHtml = generatePreviewHtml()
         console.log('[App] newHtml:', newHtml.slice(0, 200))
-        sendToIframeRef.current(newHtml)
+        sendToIframeRef.current({ type: 'render', html: newHtml })
       }
 
       setPropertyEditorState({ isOpen: false, elementId: '', element: null })
@@ -401,12 +427,16 @@ ${bodyContent}
       rightPanel={
         <VisualEditor
           elements={elements}
+          selectedElementId={selectedElementId}
+          hoveredEdge={hoveredEdge}
           onSelectElement={handleSelectElement}
           onAddElement={handleAddElement}
           onOpenPropertyEditor={handleOpenPropertyEditor}
           onDragStart={handleDragStart}
           onDrag={handleDrag}
           onDragEnd={handleDragEnd}
+          onHandleHover={handleHandleHover}
+          onCycleElement={handleCycleElement}
           renderHtmlToIframe={(sendFn) => {
             sendToIframeRef.current = sendFn
           }}

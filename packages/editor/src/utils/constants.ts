@@ -1,4 +1,4 @@
-export const DEFAULT_HTML = `<div lx lx-left="0" lx-width="1920" lx-top="0" lx-height="1080">
+export const DEFAULT_HTML = `<div id="container" lx lx-left="0" lx-width="1920" lx-top="0" lx-height="1080">
   <div id="slide" lx-top="20" lx-left="20" lx-bottom="#footer.top-20" lx-aspect="16:9">slide</div>
 
   <div id="sidebar" lx lx-top="20" lx-bottom="#footer.top-20" lx-left="#slide.right+20" lx-right="-20">

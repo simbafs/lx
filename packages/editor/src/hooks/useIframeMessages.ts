@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { LxElement } from '../types'
+import type { LxElement, IframeMessage } from '../types'
 
 interface MessageHandlers {
   elements: LxElement[]
@@ -8,7 +8,9 @@ interface MessageHandlers {
   onDragStart: (elementId: string, edge: string, startX: number, startY: number) => void
   onDrag: (elementId: string, edge: string, deltaX: number, deltaY: number) => void
   onDragEnd: (elementId: string, edge: string, deltaX: number, deltaY: number) => void
-  sendToIframe: (html: string) => void
+  onHandleHover: (elementId: string | null, edge: string | null) => void
+  onCycleElement: (direction: 'next' | 'prev', elements: string[], currentIndex: number) => void
+  sendToIframe: (message: IframeMessage) => void
 }
 
 export function useIframeMessages({
@@ -18,6 +20,8 @@ export function useIframeMessages({
   onDragStart,
   onDrag,
   onDragEnd,
+  onHandleHover,
+  onCycleElement,
   sendToIframe,
 }: MessageHandlers) {
   const elementsRef = useRef(elements)
@@ -25,9 +29,9 @@ export function useIframeMessages({
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const { type, elementId, x, y, edge, startX, startY, deltaX, deltaY } = event.data
+      const { type, elementId, x, y, edge, startX, startY, deltaX, deltaY, direction, elements: cycleElements, currentIndex } = event.data
 
-      console.log('[useIframeMessages] message:', { type, elementId, edge, startX, startY, deltaX, deltaY })
+      console.log('[useIframeMessages] message:', { type, elementId, edge, startX, startY, deltaX, deltaY, direction, cycleElements, currentIndex })
 
       switch (type) {
         case 'ready':
@@ -54,7 +58,7 @@ export function useIframeMessages({
 ${serialize(lxElements)}
 </body>
 </html>`
-          sendToIframe(readyHtml)
+          sendToIframe({ type: 'render', html: readyHtml })
           break
         case 'elementClick':
           onSelectElement(elementId)
@@ -74,10 +78,19 @@ ${serialize(lxElements)}
           console.log('[useIframeMessages] calling onDragEnd:', { elementId, edge, deltaX, deltaY })
           onDragEnd(elementId, edge, deltaX, deltaY)
           break
+        case 'handleHover':
+          onHandleHover(elementId, edge)
+          break
+        case 'cycleElement':
+          console.log('[useIframeMessages] cycleElement case:', { direction, cycleElements, currentIndex })
+          onCycleElement(direction, cycleElements, currentIndex)
+          break
+        default:
+          console.log('[useIframeMessages] unknown type:', type)
       }
     }
 
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [onSelectElement, onOpenPropertyEditor, onDragStart, onDrag, onDragEnd, sendToIframe])
+  }, [onSelectElement, onOpenPropertyEditor, onDragStart, onDrag, onDragEnd, onHandleHover, onCycleElement, sendToIframe])
 }
