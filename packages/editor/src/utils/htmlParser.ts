@@ -3,7 +3,8 @@ import { LX_ATTRS, ATTR_ALIAS } from './constants'
 
 export function parseHtmlToElements(html: string): LxElement[] {
   const parser = new DOMParser()
-  const doc = parser.parseFromString(html, 'text/html')
+  const wrapped = html.includes('<body') ? html : `<body>${html}</body>`
+  const doc = parser.parseFromString(wrapped, 'text/html')
   return Array.from(doc.body.children).map(parseElement)
 }
 

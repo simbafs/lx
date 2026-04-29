@@ -1,35 +1,22 @@
-export const DEFAULT_HTML = `<!doctype html>
-<html>
-<head>
-  <style>
-    div {
-      background-color: rgba(255, 180, 0, 0.08);
-      border: 1px dashed rgba(0, 0, 0, 0.25);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      font-family: sans-serif;
-    }
-  </style>
-</head>
-<body>
-  <div id="container" lx lx-left="0" lx-top="0" lx-right="0" lx-bottom="0">
-    <div id="header" lx lx-left="20" lx-top="20" lx-width="300" lx-height="60">
-      Header
-    </div>
-    <div id="sidebar" lx lx-left="20" lx-top="previous.bottom+20" lx-width="150" lx-height="200">
-      Sidebar
-    </div>
-    <div id="main" lx lx-left="previous.right+20" lx-top="20" lx-right="20" lx-bottom="100">
-      Main Content
-    </div>
-    <div id="footer" lx lx-left="20" lx-right="20" lx-bottom="20" lx-height="60">
-      Footer
+export const DEFAULT_HTML = `<div lx lx-left="0" lx-width="1920" lx-top="0" lx-height="1080">
+  <div id="slide" lx-top="20" lx-left="20" lx-bottom="#footer.top-20" lx-aspect="16:9">slide</div>
+
+  <div id="sidebar" lx lx-top="20" lx-bottom="#footer.top-20" lx-left="#slide.right+20" lx-right="-20">
+    <div id="info" lx-top="0" lx-height="200/500" lx-left="0" lx-right="0">info</div>
+
+
+    <div id="logo" lx-bottom="#qrcodes.top-20" lx-height="100" lx-left="0" lx-right="0">logo</div>
+
+
+    <div id="qrcodes" lx lx-bottom="0" lx-height="250" lx-left="0" lx-right="0">
+      <div id="hackmdqr" lx-left="0" lx-width="180" lx-bottom="0" lx-height="180">hackmd qrcode</div>
+
+      <div id="slideqr" lx-right="0" lx-width="180" lx-bottom="0" lx-height="180">slide qrcode</div>
     </div>
   </div>
-</body>
-</html>`
+
+  <div id="footer" lx-bottom="-20" lx-height="200" lx-left="20" lx-right="-20">footer</div>
+</div>`
 
 export const POSITION_RE = /^(body|#([A-Za-z_][\w\-:.]*))\.(left|right|top|bottom)([+-]\d+(?:\.\d+)?)?$/
 
