@@ -1,12 +1,31 @@
-import Editor from '@monaco-editor/react'
-import { useCallback } from 'react'
+import Editor, { type Monaco } from '@monaco-editor/react'
+import { useCallback, useRef, useImperativeHandle, forwardRef } from 'react'
+import type { editor } from 'monaco-editor'
+
+export interface CodeEditorRef {
+  setValue: (value: string) => void
+  getValue: () => string
+}
 
 interface CodeEditorProps {
   value: string
   onChange: (value: string) => void
 }
 
-export default function CodeEditor({ value, onChange }: CodeEditorProps) {
+const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(function CodeEditor({ value, onChange }, ref) {
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
+
+  useImperativeHandle(ref, () => ({
+    setValue: (newValue: string) => {
+      if (editorRef.current) {
+        editorRef.current.setValue(newValue)
+      }
+    },
+    getValue: () => {
+      return editorRef.current?.getValue() || value
+    },
+  }))
+
   const handleChange = useCallback(
     (newValue: string | undefined) => {
       onChange(newValue || '')
@@ -22,6 +41,9 @@ export default function CodeEditor({ value, onChange }: CodeEditorProps) {
         defaultLanguage="html"
         value={value}
         onChange={handleChange}
+        onMount={(editor) => {
+          editorRef.current = editor
+        }}
         theme="vs-dark"
         options={{
           minimap: { enabled: false },
@@ -35,7 +57,9 @@ export default function CodeEditor({ value, onChange }: CodeEditorProps) {
       />
     </div>
   )
-}
+})
+
+export default CodeEditor
 
 const styles: Record<string, React.CSSProperties> = {
   container: {

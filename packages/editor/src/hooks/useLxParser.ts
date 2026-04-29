@@ -2,6 +2,8 @@ import { useState, useCallback, useMemo } from 'react'
 import { LxElement, ParsedNode, Edge, SizeExpr, AspectExpr, PositionExpr } from '../types'
 import { parseHtmlToElements, getCanonicalAttrs } from '../utils/htmlParser'
 
+export type HtmlSource = 'monaco' | 'visual'
+
 const POSITION_RE = /^(body|#([A-Za-z_][\w\-:.]*))\.(left|right|top|bottom)([+-]\d+(?:\.\d+)?)?$/
 const RELATIVE_RE = /^(previous|next)\.(left|right|top|bottom)([+-]\d+(?:\.\d+)?)?$/
 const FIXED_SIZE_RE = /^-?\d+(?:\.\d+)?$/
@@ -54,12 +56,16 @@ export function useLxParser(initialHtml: string) {
     }
   }, [])
 
+  const [currentSource, setCurrentSource] = useState<HtmlSource>('monaco')
+
   return {
     html,
     elements,
     parsedNodes,
     error,
     updateHtml,
+    currentSource,
+    setCurrentSource,
   }
 }
 
