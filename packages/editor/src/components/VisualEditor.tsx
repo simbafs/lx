@@ -60,6 +60,32 @@ export default function VisualEditor({
       console.log('[VisualEditor] message:', { type, elementId, edge, startX, startY, deltaX, deltaY })
 
       switch (type) {
+        case 'ready':
+          console.log('[VisualEditor] iframe ready, sending initial HTML')
+          const lxElements = elements.filter(el => el.attrs['lx'] !== undefined)
+          const serialize = (els: LxElement[]): string => els.map(el => {
+            const attrs = Object.entries(el.attrs).map(([k, v]) => `${k}="${v}"`).join(' ')
+            const idPart = el.id ? ` id="${el.id}"` : ''
+            const text = el.text || ''
+            if (el.children.length > 0) {
+              return `<div${idPart} ${attrs}>\n${serialize(el.children)}\n</div>`
+            }
+            return `<div${idPart} ${attrs}>${text}</div>`
+          }).join('\n')
+          const readyHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #f5f5f5; }
+  </style>
+</head>
+<body>
+${serialize(lxElements)}
+</body>
+</html>`
+          sendToIframe(readyHtml)
+          break
         case 'elementClick':
           onSelectElement(elementId)
           break
@@ -85,7 +111,7 @@ export default function VisualEditor({
 
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [onSelectElement, onOpenPropertyEditor, onDragStart, onDrag, onDragEnd])
+  }, [onSelectElement, onOpenPropertyEditor, onDragStart, onDrag, onDragEnd, elements, sendToIframe, generateHtml])
 
   useEffect(() => {
     if (!iframeRef.current) return
@@ -100,7 +126,7 @@ export default function VisualEditor({
     }
   }, [renderHtmlToIframe, sendToIframe])
 
-  const generateHtml = (elements: LxElement[]): string => {
+  function generateHtml(elements: LxElement[]): string {
     const lxElements = elements.filter(el => el.attrs['lx'] !== undefined)
     
     return `<!DOCTYPE html>
@@ -117,7 +143,7 @@ ${serializeElements(lxElements)}
 </html>`
   }
 
-  const serializeElements = (elements: LxElement[]): string => {
+  function serializeElements(elements: LxElement[]): string {
     return elements.map(el => {
       const attrs = Object.entries(el.attrs)
         .map(([k, v]) => `${k}="${v}"`)

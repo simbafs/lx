@@ -85,6 +85,10 @@
 
     const container = document.getElementById('lx-preview-root');
 
+    window.addEventListener('load', () => {
+      parent.postMessage({ type: 'ready' }, '*');
+    });
+
     window.addEventListener('message', async (event) => {
       const { type, html } = event.data;
       if (type === 'render') {
