@@ -104,6 +104,7 @@ ${serializeEls(lxElements)}
     startValue: string
     startOffset: number
     attr: string
+    referencePrefix: string
   } | null>(null)
 
   const allIds = extractAllElementIds(elements)
@@ -277,7 +278,14 @@ ${serializeEls(lxElements)}
       const startOffset = parseOffset(currentValue || '0')
       const startValue = currentValue || '0'
 
-      console.log('[App] dragInfo:', { elementId, edge, startValue, startOffset, attr })
+      // 提取參照前綴，例如 "previous.right" 或 "#header.left" 或 "body.left"
+      // 只提取到 sign 之前，不包含 sign（sign 會根據 offset 的正負來添加）
+      const lastSignIndex = currentValue.lastIndexOf('+')
+      const lastMinusIndex = currentValue.lastIndexOf('-')
+      const signIndex = Math.max(lastSignIndex, lastMinusIndex)
+      const referencePrefix = signIndex > 0 ? currentValue.slice(0, signIndex) : ''
+
+      console.log('[App] dragInfo:', { elementId, edge, startValue, startOffset, attr, referencePrefix })
 
       setDragInfo({
         elementId,
@@ -285,6 +293,7 @@ ${serializeEls(lxElements)}
         startValue,
         startOffset,
         attr,
+        referencePrefix,
       })
     },
     [getElementById],
@@ -300,6 +309,7 @@ ${serializeEls(lxElements)}
       const attr = dragInfo.attr
       const startValue = dragInfo.startValue
       const startOffset = dragInfo.startOffset
+      const referencePrefix = dragInfo.referencePrefix
 
       let newOffset: number
       if (['left', 'right'].includes(edge)) {
@@ -313,13 +323,17 @@ ${serializeEls(lxElements)}
       }
 
       let newValue: string
-      if (!/^[+-]/.test(startValue)) {
+      if (referencePrefix) {
+        newValue = referencePrefix + (newOffset >= 0 ? '+' : '') + newOffset
+        console.log('[App] case referencePrefix:', { referencePrefix, newOffset, newValue })
+      } else if (!/^[+-]/.test(startValue)) {
         newValue = String(newOffset)
+        console.log('[App] case no +/-:', { startValue, newOffset, newValue })
       } else {
         newValue = (newOffset >= 0 ? '+' : '') + newOffset.toString()
       }
 
-      console.log('[App] handleDrag newValue:', newValue, { startValue, startOffset, newOffset })
+      console.log('[App] handleDrag newValue:', newValue, { startValue, startOffset, newOffset, referencePrefix })
 
       updateElementAttr(elementId, attr, newValue)
 
@@ -348,7 +362,8 @@ ${serializeEls(lxElements)}
       const attr = dragInfo.attr
       const startValue = dragInfo.startValue
       const startOffset = dragInfo.startOffset
-      console.log('[App] will update:', { attr, startValue, startOffset })
+      const referencePrefix = dragInfo.referencePrefix
+      console.log('[App] will update:', { attr, startValue, startOffset, referencePrefix })
 
       let newOffset: number
 
@@ -365,10 +380,15 @@ ${serializeEls(lxElements)}
 
       console.log('[App] newOffset:', newOffset)
       let newValue: string
-      if (!/^[+-]/.test(startValue)) {
+      if (referencePrefix) {
+        newValue = referencePrefix + (newOffset >= 0 ? '+' : '') + newOffset
+        console.log('[App] case referencePrefix:', { referencePrefix, newOffset, newValue })
+      } else if (!/^[+-]/.test(startValue)) {
         newValue = String(newOffset)
+        console.log('[App] case no +/-:', { startValue, newOffset, newValue })
       } else {
         newValue = (newOffset >= 0 ? '+' : '') + newOffset.toString()
+        console.log('[App] case has +/-:', { startValue, newOffset, newValue })
       }
 
       console.log('[App] final newValue:', newValue)
