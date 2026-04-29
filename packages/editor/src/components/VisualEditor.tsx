@@ -31,6 +31,7 @@ interface VisualEditorProps {
     deltaX: number,
     deltaY: number,
   ) => void
+  renderHtmlToIframe?: (sendFn: (html: string) => void) => void
 }
 
 export default function VisualEditor({
@@ -43,9 +44,14 @@ export default function VisualEditor({
   onDragStart,
   onDrag,
   onDragEnd,
+  renderHtmlToIframe,
 }: VisualEditorProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [dragState, setDragState] = useState<{ edge: string } | null>(null)
+
+  const sendToIframe = useCallback((html: string) => {
+    iframeRef.current?.contentWindow?.postMessage({ type: 'render', html }, '*')
+  }, [])
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -85,8 +91,14 @@ export default function VisualEditor({
     if (!iframeRef.current) return
 
     const html = generateHtml(elements)
-    iframeRef.current.contentWindow?.postMessage({ type: 'render', html }, '*')
-  }, [elements])
+    sendToIframe(html)
+  }, [elements, sendToIframe])
+
+  useEffect(() => {
+    if (renderHtmlToIframe) {
+      renderHtmlToIframe(sendToIframe)
+    }
+  }, [renderHtmlToIframe, sendToIframe])
 
   const generateHtml = (elements: LxElement[]): string => {
     const lxElements = elements.filter(el => el.attrs['lx'] !== undefined)

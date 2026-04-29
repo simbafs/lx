@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import CodeEditor from './components/CodeEditor'
 import VisualEditor from './components/VisualEditor'
 import PositionPicker from './components/PositionPicker'
@@ -43,6 +43,37 @@ const DEFAULT_HTML = `<!doctype html>
 export default function App() {
   const { html, elements, updateHtml } = useLxParser(DEFAULT_HTML)
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null)
+  const sendToIframeRef = useRef<((html: string) => void) | null>(null)
+
+  const generatePreviewHtml = useCallback((): string => {
+    const lxElements = elements.filter(el => el.attrs['lx'] !== undefined)
+    const serializeEls = (els: LxElement[]): string => {
+      return els.map(el => {
+        const attrs = Object.entries(el.attrs)
+          .map(([k, v]) => `${k}="${v}"`)
+          .join(' ')
+        const idPart = el.id ? ` id="${el.id}"` : ''
+        const text = el.text || ''
+        if (el.children.length > 0) {
+          return `<div${idPart} ${attrs}>\n${serializeEls(el.children)}\n</div>`
+        }
+        return `<div${idPart} ${attrs}>${text}</div>`
+      }).join('\n')
+    }
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #f5f5f5; }
+  </style>
+</head>
+<body>
+${serializeEls(lxElements)}
+</body>
+</html>`
+  }, [elements])
+
   const [pickerState, setPickerState] = useState<{
     isOpen: boolean
     elementId: string
@@ -70,6 +101,7 @@ export default function App() {
   const [dragInfo, setDragInfo] = useState<{
     elementId: string
     edge: string
+    startValue: string
     startOffset: number
     attr: string
   } | null>(null)
@@ -90,7 +122,7 @@ export default function App() {
 
   const parseOffset = (value: string): number => {
     if (!value) return 0
-    const match = value.match(/[+-]\d+(\.\d+)?$/)
+    const match = value.match(/[+-]?\d+(\.\d+)?$/)
     if (match) return parseFloat(match[0])
     return 0
   }
@@ -243,10 +275,14 @@ export default function App() {
       }
 
       const startOffset = parseOffset(currentValue || '0')
+      const startValue = currentValue || '0'
+
+      console.log('[App] dragInfo:', { elementId, edge, startValue, startOffset, attr })
 
       setDragInfo({
         elementId,
         edge,
+        startValue,
         startOffset,
         attr,
       })
@@ -255,10 +291,44 @@ export default function App() {
   )
 
   const handleDrag = useCallback(
-    (_elementId: string, _edge: string, _deltaX: number, _deltaY: number) => {
-      // For now, we only update on dragEnd
+    (elementId: string, edge: string, deltaX: number, deltaY: number) => {
+      console.log('[App] handleDrag:', { elementId, edge, deltaX, deltaY })
+      if (!dragInfo || dragInfo.elementId !== elementId) {
+        return
+      }
+
+      const attr = dragInfo.attr
+      const startValue = dragInfo.startValue
+      const startOffset = dragInfo.startOffset
+
+      let newOffset: number
+      if (['left', 'right'].includes(edge)) {
+        newOffset = startOffset + deltaX
+      } else if (['top', 'bottom'].includes(edge)) {
+        newOffset = startOffset + deltaY
+      } else if (['tl', 'tr', 'bl', 'br'].includes(edge)) {
+        newOffset = startOffset + deltaX
+      } else {
+        return
+      }
+
+      let newValue: string
+      if (!/^[+-]/.test(startValue)) {
+        newValue = String(newOffset)
+      } else {
+        newValue = (newOffset >= 0 ? '+' : '') + newOffset.toString()
+      }
+
+      console.log('[App] handleDrag newValue:', newValue, { startValue, startOffset, newOffset })
+
+      updateElementAttr(elementId, attr, newValue)
+
+      if (sendToIframeRef.current) {
+        const newHtml = generatePreviewHtml()
+        sendToIframeRef.current(newHtml)
+      }
     },
-    [],
+    [dragInfo, getElementById, updateElementAttr, generatePreviewHtml],
   )
 
   const handleDragEnd = useCallback(
@@ -276,9 +346,9 @@ export default function App() {
       }
 
       const attr = dragInfo.attr
-      const oldValue = element.attrs[attr] || ''
+      const startValue = dragInfo.startValue
       const startOffset = dragInfo.startOffset
-      console.log('[App] will update:', { attr, oldValue, startOffset })
+      console.log('[App] will update:', { attr, startValue, startOffset })
 
       let newOffset: number
 
@@ -294,10 +364,12 @@ export default function App() {
       }
 
       console.log('[App] newOffset:', newOffset)
-      const newValue = oldValue.replace(
-        /([+-]?\d+(\.\d+)?)$/,
-        (newOffset >= 0 ? '+' : '') + newOffset.toString(),
-      )
+      let newValue: string
+      if (!/^[+-]/.test(startValue)) {
+        newValue = String(newOffset)
+      } else {
+        newValue = (newOffset >= 0 ? '+' : '') + newOffset.toString()
+      }
 
       console.log('[App] final newValue:', newValue)
       updateElementAttr(elementId, attr, newValue)
@@ -358,6 +430,9 @@ export default function App() {
           onDragStart={handleDragStart}
           onDrag={handleDrag}
           onDragEnd={handleDragEnd}
+          renderHtmlToIframe={(sendFn) => {
+            sendToIframeRef.current = sendFn
+          }}
         />
       </div>
       <PositionPicker
