@@ -1,32 +1,5 @@
 import { LxElement } from '../types'
-
-const LX_ATTRS = [
-  'lx-left',
-  'lx-right',
-  'lx-top',
-  'lx-bottom',
-  'lx-width',
-  'lx-height',
-  'lx-aspect',
-  'lx-l',
-  'lx-r',
-  'lx-t',
-  'lx-b',
-  'lx-w',
-  'lx-h',
-  'lx-a',
-  'lx',
-]
-
-const ATTR_ALIAS: Record<string, string> = {
-  'lx-l': 'lx-left',
-  'lx-r': 'lx-right',
-  'lx-t': 'lx-top',
-  'lx-b': 'lx-bottom',
-  'lx-w': 'lx-width',
-  'lx-h': 'lx-height',
-  'lx-a': 'lx-aspect',
-}
+import { LX_ATTRS, ATTR_ALIAS } from './constants'
 
 export function parseHtmlToElements(html: string): LxElement[] {
   const parser = new DOMParser()

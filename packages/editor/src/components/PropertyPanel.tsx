@@ -1,5 +1,7 @@
 import { LxElement } from '../types'
-import { useElementAttrs, LX_ATTRS_LIST } from '../hooks/useElementAttrs'
+import { useElementAttrs } from '../hooks/useElementAttrs'
+import { LX_ATTRS_LIST } from '../utils/constants'
+import { propertyPanelStyles as styles } from '../styles'
 
 interface PropertyPanelProps {
   isOpen: boolean
@@ -65,79 +67,4 @@ export default function PropertyPanel({
       </div>
     </div>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'rgba(0, 0, 0, 0.6)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  modal: {
-    background: '#252526',
-    borderRadius: 8,
-    padding: 20,
-    width: 400,
-    maxHeight: '80vh',
-    overflow: 'auto',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-  },
-  title: {
-    marginBottom: 20,
-    color: '#ccc',
-    fontSize: 14,
-  },
-  attrList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12,
-    marginBottom: 20,
-  },
-  field: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 4,
-  },
-  label: {
-    color: '#999',
-    fontSize: 12,
-    textTransform: 'uppercase',
-  },
-  input: {
-    padding: '8px 12px',
-    background: '#3c3c3c',
-    border: '1px solid #555',
-    borderRadius: 4,
-    color: '#fff',
-    fontSize: 14,
-    fontFamily: 'monospace',
-  },
-  actions: {
-    display: 'flex',
-    gap: 12,
-    justifyContent: 'flex-end',
-  },
-  cancelBtn: {
-    padding: '8px 16px',
-    background: 'transparent',
-    border: '1px solid #555',
-    borderRadius: 4,
-    color: '#ccc',
-    cursor: 'pointer',
-  },
-  confirmBtn: {
-    padding: '8px 16px',
-    background: '#007acc',
-    border: 'none',
-    borderRadius: 4,
-    color: '#fff',
-    cursor: 'pointer',
-  },
 }

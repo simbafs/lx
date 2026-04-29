@@ -1,6 +1,7 @@
 import Editor from '@monaco-editor/react'
 import { useCallback, useRef, useImperativeHandle, forwardRef } from 'react'
 import type { editor } from 'monaco-editor'
+import { codeEditorStyles as styles } from '../styles'
 
 export interface CodeEditorRef {
   setValue: (value: string) => void
@@ -60,22 +61,3 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(function CodeEdito
 })
 
 export default CodeEditor
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100%',
-    borderRight: '1px solid #333',
-  },
-  header: {
-    padding: '8px 12px',
-    background: '#1e1e1e',
-    color: '#ccc',
-    fontSize: 12,
-    fontWeight: 600,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    borderBottom: '1px solid #333',
-  },
-}

@@ -3,43 +3,12 @@ import CodeEditor, { CodeEditorRef } from './components/CodeEditor'
 import VisualEditor from './components/VisualEditor'
 import PositionPicker from './components/PositionPicker'
 import PropertyPanel from './components/PropertyPanel'
+import Layout from './components/Layout'
 import { useLxParser } from './hooks/useLxParser'
 import { useMonacoSync } from './hooks/useMonacoSync'
 import { LxElement, Edge } from './types'
 import { extractAllElementIds } from './utils/htmlParser'
-
-const DEFAULT_HTML = `<!doctype html>
-<html>
-<head>
-  <style>
-    div {
-      background-color: rgba(255, 180, 0, 0.08);
-      border: 1px dashed rgba(0, 0, 0, 0.25);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      font-family: sans-serif;
-    }
-  </style>
-</head>
-<body>
-  <div id="container" lx lx-left="0" lx-top="0" lx-right="0" lx-bottom="0">
-    <div id="header" lx lx-left="20" lx-top="20" lx-width="300" lx-height="60">
-      Header
-    </div>
-    <div id="sidebar" lx lx-left="20" lx-top="previous.bottom+20" lx-width="150" lx-height="200">
-      Sidebar
-    </div>
-    <div id="main" lx lx-left="previous.right+20" lx-top="20" lx-right="20" lx-bottom="100">
-      Main Content
-    </div>
-    <div id="footer" lx lx-left="20" lx-right="20" lx-bottom="20" lx-height="60">
-      Footer
-    </div>
-  </div>
-</body>
-</html>`
+import { DEFAULT_HTML } from './utils/constants'
 
 export default function App() {
   const { html, elements, updateHtml, currentSource, setCurrentSource } = useLxParser(DEFAULT_HTML)
@@ -50,7 +19,6 @@ export default function App() {
   useMonacoSync({ html, currentSource, codeEditorRef })
 
   const generatePreviewHtml = useCallback((): string => {
-    // 從當前 html 狀態中提取 body 內容
     const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/)
     const bodyContent = bodyMatch ? bodyMatch[1] : ''
     return `<!DOCTYPE html>
@@ -261,8 +229,6 @@ ${bodyContent}
       const startOffset = parseOffset(currentValue || '0')
       const startValue = currentValue || '0'
 
-      // 提取參照前綴，例如 "previous.right" 或 "#header.left" 或 "body.left"
-      // 只提取到 sign 之前，不包含 sign（sign 會根據 offset 的正負來添加）
       const lastSignIndex = currentValue.lastIndexOf('+')
       const lastMinusIndex = currentValue.lastIndexOf('-')
       const signIndex = Math.max(lastSignIndex, lastMinusIndex)
@@ -430,11 +396,9 @@ ${bodyContent}
   }, [])
 
   return (
-    <div style={styles.app}>
-      <div style={styles.left}>
-        <CodeEditor ref={codeEditorRef} value={html} onChange={handleCodeChange} />
-      </div>
-      <div style={styles.right}>
+    <Layout
+      leftPanel={<CodeEditor ref={codeEditorRef} value={html} onChange={handleCodeChange} />}
+      rightPanel={
         <VisualEditor
           elements={elements}
           onSelectElement={handleSelectElement}
@@ -447,7 +411,8 @@ ${bodyContent}
             sendToIframeRef.current = sendFn
           }}
         />
-      </div>
+      }
+    >
       <PositionPicker
         isOpen={pickerState.isOpen}
         elementId={pickerState.elementId}
@@ -462,28 +427,6 @@ ${bodyContent}
         onConfirm={handlePropertyEditorConfirm}
         onCancel={handlePropertyEditorCancel}
       />
-    </div>
+    </Layout>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  app: {
-    display: 'flex',
-    width: '100vw',
-    height: '100vh',
-    overflow: 'hidden',
-    background: '#1e1e1e',
-  },
-  left: {
-    width: '50%',
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  right: {
-    width: '50%',
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-  },
 }

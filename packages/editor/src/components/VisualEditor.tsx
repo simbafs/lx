@@ -3,6 +3,7 @@ import { LxElement } from '../types'
 import { useIframeMessages } from '../hooks/useIframeMessages'
 import { useSyncToIframe } from '../hooks/useSyncToIframe'
 import { useIframeSender } from '../hooks/useIframeSender'
+import { visualEditorStyles as styles } from '../styles'
 
 interface VisualEditorProps {
   elements: LxElement[]
@@ -98,46 +99,4 @@ export default function VisualEditor({
       </div>
     </div>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100%',
-    background: '#1e1e1e',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '8px 12px',
-    background: '#252526',
-    color: '#ccc',
-    fontSize: 12,
-    fontWeight: 600,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    borderBottom: '1px solid #333',
-  },
-  addBtn: {
-    padding: '4px 12px',
-    background: '#007acc',
-    border: 'none',
-    borderRadius: 4,
-    color: '#fff',
-    fontSize: 12,
-    cursor: 'pointer',
-  },
-  canvas: {
-    flex: 1,
-    position: 'relative',
-    overflow: 'hidden',
-    background: '#f5f5f5',
-  },
-  iframe: {
-    width: '100%',
-    height: '100%',
-    border: 'none',
-  },
 }

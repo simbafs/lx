@@ -1,15 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { LxElement } from '../types'
-
-const LX_ATTRS = [
-  'lx-left',
-  'lx-right',
-  'lx-top',
-  'lx-bottom',
-  'lx-width',
-  'lx-height',
-  'lx-aspect',
-]
+import { LX_ATTRS_LIST } from '../utils/constants'
 
 export function useElementAttrs(element: LxElement | null) {
   const [attrs, setAttrs] = useState<Record<string, string>>({})
@@ -17,7 +8,7 @@ export function useElementAttrs(element: LxElement | null) {
   useEffect(() => {
     if (element) {
       const lxAttrs: Record<string, string> = {}
-      LX_ATTRS.forEach(attr => {
+      LX_ATTRS_LIST.forEach(attr => {
         lxAttrs[attr] = element.attrs[attr] || ''
       })
       setAttrs(lxAttrs)
@@ -30,5 +21,3 @@ export function useElementAttrs(element: LxElement | null) {
 
   return { attrs, setAttrs: updateAttr }
 }
-
-export const LX_ATTRS_LIST = LX_ATTRS
