@@ -4,7 +4,7 @@ test.use({ viewport: { width: 1920, height: 1080 } })
 
 test.describe('Layout positioning', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/test.html')
+		await page.goto('/tests/e2e/test.html')
 		await page.waitForFunction(() => (window as any).lx !== undefined)
 	})
 
@@ -102,7 +102,7 @@ test.describe('Layout positioning', () => {
 
 test.describe('Dynamic updates', () => {
 	test('should update layout when gap changes', async ({ page }) => {
-		await page.goto('/test.html')
+		await page.goto('/tests/e2e/test.html')
 		await page.waitForFunction(() => (window as any).lx !== undefined)
 
 		const qaBefore = await page.locator('#qa').boundingBox()
@@ -123,7 +123,7 @@ test.describe('Dynamic updates', () => {
 	})
 
 	test('should update layout when scale changes', async ({ page }) => {
-		await page.goto('/test.html')
+		await page.goto('/tests/e2e/test.html')
 		await page.waitForFunction(() => (window as any).lx !== undefined)
 
 		const mainBefore = await page.locator('#main').boundingBox()
@@ -142,7 +142,7 @@ test.describe('Dynamic updates', () => {
 	})
 
 	test('should update #qa position when #info height changes on click', async ({ page }) => {
-		await page.goto('/test.html')
+		await page.goto('/tests/e2e/test.html')
 		await page.waitForFunction(() => (window as any).lx !== undefined)
 
 		const qaBefore = await page.locator('#qa').boundingBox()
@@ -170,7 +170,7 @@ test.describe('Error handling', () => {
 			}
 		})
 
-		await page.goto('/test.html')
+		await page.goto('/tests/e2e/test.html')
 		await page.waitForFunction(() => (window as any).lx !== undefined)
 		await page.waitForTimeout(100)
 
@@ -179,7 +179,7 @@ test.describe('Error handling', () => {
 	})
 
 	test('should handle circular dependency detection', async ({ page }) => {
-		await page.goto('/test.html')
+		await page.goto('/tests/e2e/test.html')
 		await page.waitForFunction(() => (window as any).lx !== undefined)
 
 		await page.evaluate(() => {
@@ -215,7 +215,7 @@ test.describe('Error handling', () => {
 	})
 
 	test('should fail when lx-aspect and range size coexist', async ({ page }) => {
-		await page.goto('/test.html')
+		await page.goto('/tests/e2e/test.html')
 		await page.waitForFunction(() => (window as any).lx !== undefined)
 
 		const errors: string[] = []

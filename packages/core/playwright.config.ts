@@ -12,15 +12,19 @@ export default defineConfig({
 		trace: 'on-first-retry',
 		viewport: { width: 1920, height: 1080 },
 	},
+	webServer: {
+		command: 'pnpm build && pnpm exec serve . -l 5173',
+		url: 'http://localhost:5173',
+		reuseExistingServer: !process.env.CI,
+		timeout: 120000,
+		stdout: 'ignore',
+		stderr: 'ignore',
+		cwd: '.',
+	},
 	projects: [
 		{
 			name: 'firefox',
 			use: { ...devices['Desktop Firefox'] },
 		},
 	],
-	webServer: {
-		command: 'pnpm build && npx serve . -l 5173',
-		url: 'http://localhost:5173',
-		reuseExistingServer: !process.env.CI,
-	},
 })
