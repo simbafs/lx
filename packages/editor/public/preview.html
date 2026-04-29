@@ -63,10 +63,6 @@
       top: 8px; bottom: 8px; right: 0; width: 10px;
       cursor: ew-resize;
     }
-    .handle.handle-tl { top: 0; left: 0; width: 16px; height: 16px; cursor: nwse-resize; }
-    .handle.handle-tr { top: 0; right: 0; width: 16px; height: 16px; cursor: nesw-resize; }
-    .handle.handle-bl { bottom: 0; left: 0; width: 16px; height: 16px; cursor: nesw-resize; }
-    .handle.handle-br { bottom: 0; right: 0; width: 16px; height: 16px; cursor: nwse-resize; }
     .handle:hover {
       background: rgba(0, 122, 204, 0.3);
     }
@@ -138,10 +134,6 @@
         .handle.handle-bottom { bottom: 0; left: 8px; right: 8px; height: 10px; cursor: ns-resize; }
         .handle.handle-left { top: 8px; bottom: 8px; left: 0; width: 10px; cursor: ew-resize; }
         .handle.handle-right { top: 8px; bottom: 8px; right: 0; width: 10px; cursor: ew-resize; }
-        .handle.handle-tl { top: 0; left: 0; width: 16px; height: 16px; cursor: nwse-resize; }
-        .handle.handle-tr { top: 0; right: 0; width: 16px; height: 16px; cursor: nesw-resize; }
-        .handle.handle-bl { bottom: 0; left: 0; width: 16px; height: 16px; cursor: nesw-resize; }
-        .handle.handle-br { bottom: 0; right: 0; width: 16px; height: 16px; cursor: nwse-resize; }
         .handle:hover { background: rgba(0, 122, 204, 0.3); }
         .handle.disabled { cursor: not-allowed; pointer-events: none; }
       `;
@@ -188,10 +180,6 @@
         { edge: 'bottom', class: 'handle-bottom' },
         { edge: 'left', class: 'handle-left' },
         { edge: 'right', class: 'handle-right' },
-        { edge: 'tl', class: 'handle-tl' },
-        { edge: 'tr', class: 'handle-tr' },
-        { edge: 'bl', class: 'handle-bl' },
-        { edge: 'br', class: 'handle-br' },
       ];
 
       handles.forEach(({ edge, class: className }) => {
