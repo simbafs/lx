@@ -46,8 +46,12 @@ export function useLxParser(initialHtml: string) {
     return nodes
   }, [elements])
 
-  const updateHtml = useCallback((newHtml: string) => {
-    setHtml(newHtml)
+  const updateHtml = useCallback((newHtml: string | ((prev: string) => string)) => {
+    if (typeof newHtml === 'function') {
+      setHtml(newHtml)
+    } else {
+      setHtml(newHtml)
+    }
   }, [])
 
   return {

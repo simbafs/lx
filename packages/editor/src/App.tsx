@@ -46,20 +46,9 @@ export default function App() {
   const sendToIframeRef = useRef<((html: string) => void) | null>(null)
 
   const generatePreviewHtml = useCallback((): string => {
-    const lxElements = elements.filter(el => el.attrs['lx'] !== undefined)
-    const serializeEls = (els: LxElement[]): string => {
-      return els.map(el => {
-        const attrs = Object.entries(el.attrs)
-          .map(([k, v]) => `${k}="${v}"`)
-          .join(' ')
-        const idPart = el.id ? ` id="${el.id}"` : ''
-        const text = el.text || ''
-        if (el.children.length > 0) {
-          return `<div${idPart} ${attrs}>\n${serializeEls(el.children)}\n</div>`
-        }
-        return `<div${idPart} ${attrs}>${text}</div>`
-      }).join('\n')
-    }
+    // 從當前 html 狀態中提取 body 內容
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/)
+    const bodyContent = bodyMatch ? bodyMatch[1] : ''
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -69,10 +58,10 @@ export default function App() {
   </style>
 </head>
 <body>
-${serializeEls(lxElements)}
+${bodyContent}
 </body>
 </html>`
-  }, [elements])
+  }, [html])
 
   const [pickerState, setPickerState] = useState<{
     isOpen: boolean
@@ -129,14 +118,16 @@ ${serializeEls(lxElements)}
   }
 
   const updateElementAttr = useCallback((elementId: string, attr: string, value: string) => {
-    const updateInHtml = (html: string): string => {
+    console.log('[App] updateElementAttr called:', { elementId, attr, value })
+    updateHtml((prevHtml: string) => {
+      console.log('[App] updateElementAttr prevHtml:', prevHtml.slice(0, 200))
       const attrRegex = new RegExp(
         `(<div[^>]*id="${elementId}"[^>]*)(\\s+${attr}="[^"]*")([^>]*>)`,
         'i',
       )
 
-      if (attrRegex.test(html)) {
-        return html.replace(attrRegex, (_match, before, _oldAttr, after) => {
+      if (attrRegex.test(prevHtml)) {
+        return prevHtml.replace(attrRegex, (_match, before, _oldAttr, after) => {
           return `${before} ${attr}="${value}"${after}`
         })
       }
@@ -145,13 +136,11 @@ ${serializeEls(lxElements)}
         `(<div[^>]*id="${elementId}"[^>]*)(>)`,
         'i',
       )
-      return html.replace(insertRegex, (_match, before, after) => {
+      return prevHtml.replace(insertRegex, (_match, before, after) => {
         return `${before} ${attr}="${value}"${after}`
       })
-    }
-
-    updateHtml(updateInHtml(html))
-  }, [html, updateHtml])
+    })
+  }, [updateHtml])
 
   const handleCodeChange = useCallback(
     (newCode: string) => {
@@ -417,17 +406,27 @@ ${serializeEls(lxElements)}
 
   const handlePropertyEditorConfirm = useCallback(
     (attrs: Record<string, string>) => {
+      console.log('[App] handlePropertyEditorConfirm:', { attrs, propertyEditorState })
       const { elementId } = propertyEditorState
+      console.log('[App] elementId:', elementId)
 
       Object.entries(attrs).forEach(([attr, value]) => {
+        console.log('[App] updating:', { elementId, attr, value })
         if (value) {
           updateElementAttr(elementId, attr, value)
         }
       })
 
+      console.log('[App] sendToIframeRef.current:', sendToIframeRef.current)
+      if (sendToIframeRef.current) {
+        const newHtml = generatePreviewHtml()
+        console.log('[App] newHtml:', newHtml.slice(0, 200))
+        sendToIframeRef.current(newHtml)
+      }
+
       setPropertyEditorState({ isOpen: false, elementId: '', element: null })
     },
-    [propertyEditorState, updateElementAttr],
+    [propertyEditorState, updateElementAttr, generatePreviewHtml],
   )
 
   const handlePropertyEditorCancel = useCallback(() => {
