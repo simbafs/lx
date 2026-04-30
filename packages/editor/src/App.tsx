@@ -248,8 +248,13 @@ ${bodyContent}
           currentValue = element.attrs[attr]
         }
       } else if (edge === 'top') {
-        attr = 'lx-top'
-        currentValue = element.attrs[attr] || ''
+        if (element.attrs['lx-top']) {
+          attr = 'lx-top'
+          currentValue = element.attrs[attr]
+        } else if (element.attrs['lx-height']) {
+          attr = 'lx-height'
+          currentValue = element.attrs[attr]
+        }
       } else if (edge === 'bottom') {
         if (element.attrs['lx-bottom']) {
           attr = 'lx-bottom'
@@ -297,10 +302,17 @@ ${bodyContent}
       const startOffset = dragInfo.startOffset
       const referencePrefix = dragInfo.referencePrefix
 
+      const isWidth = dragInfo.attr === 'lx-width'
+      const isHeight = dragInfo.attr === 'lx-height'
+
       let newOffset: number
-      if (['left', 'right'].includes(edge)) {
+      if (edge === 'left') {
+        newOffset = startOffset + (isWidth ? -deltaX : deltaX)
+      } else if (edge === 'right') {
         newOffset = startOffset + deltaX
-      } else if (['top', 'bottom'].includes(edge)) {
+      } else if (edge === 'top') {
+        newOffset = startOffset + (isHeight ? -deltaY : deltaY)
+      } else if (edge === 'bottom') {
         newOffset = startOffset + deltaY
       } else if (['tl', 'tr', 'bl', 'br'].includes(edge)) {
         newOffset = startOffset + deltaX
@@ -351,11 +363,18 @@ ${bodyContent}
       const referencePrefix = dragInfo.referencePrefix
       console.log('[App] will update:', { attr, startValue, startOffset, referencePrefix })
 
+      const isWidth = dragInfo.attr === 'lx-width'
+      const isHeight = dragInfo.attr === 'lx-height'
+
       let newOffset: number
 
-      if (['left', 'right'].includes(edge)) {
+      if (edge === 'left') {
+        newOffset = startOffset + (isWidth ? -deltaX : deltaX)
+      } else if (edge === 'right') {
         newOffset = startOffset + deltaX
-      } else if (['top', 'bottom'].includes(edge)) {
+      } else if (edge === 'top') {
+        newOffset = startOffset + (isHeight ? -deltaY : deltaY)
+      } else if (edge === 'bottom') {
         newOffset = startOffset + deltaY
       } else if (['tl', 'tr', 'bl', 'br'].includes(edge)) {
         newOffset = startOffset + deltaX

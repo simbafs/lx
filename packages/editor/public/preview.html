@@ -73,6 +73,19 @@
     .handle.overlapping {
       background: rgba(0, 122, 204, 0.15);
     }
+    .handle.dragging {
+      background: rgba(0, 122, 204, 0.5) !important;
+      pointer-events: auto;
+    }
+    .handle.dragging:hover {
+      background: rgba(0, 122, 204, 0.5) !important;
+    }
+    body.is-dragging .handle:not(.dragging) {
+      pointer-events: none;
+    }
+    body.is-dragging .handle:not(.dragging):hover {
+      background: transparent;
+    }
     .handle.disabled {
       cursor: not-allowed;
       pointer-events: none;
@@ -260,6 +273,14 @@
           e.preventDefault();
           e.stopPropagation();
 
+          // Clear all active/overlapping classes when starting to drag
+          const allHandles = document.querySelectorAll('.handle');
+          allHandles.forEach(h => {
+            h.classList.remove('active', 'overlapping');
+          });
+          handle.classList.add('dragging');
+          document.body.classList.add('is-dragging');
+
           const targetId = selectedElementId || el.id;
 
           const startX = e.clientX;
@@ -299,7 +320,9 @@
               deltaX,
               deltaY
             }, '*');
-            
+
+            handle.classList.remove('dragging');
+            document.body.classList.remove('is-dragging');
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
           };
