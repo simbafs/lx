@@ -4,14 +4,25 @@ import VisualEditor from './components/VisualEditor'
 import PositionPicker from './components/PositionPicker'
 import PropertyPanel from './components/PropertyPanel'
 import Layout from './components/Layout'
+import FileTabs from './components/FileTabs'
 import { useLxParser } from './hooks/useLxParser'
 import { useMonacoSync } from './hooks/useMonacoSync'
 import { LxElement, Edge, IframeMessage } from './types'
 import { extractAllElementIds } from './utils/htmlParser'
-import { DEFAULT_HTML } from './utils/constants'
 
 export default function App() {
-  const { html, elements, updateHtml, currentSource, setCurrentSource } = useLxParser(DEFAULT_HTML)
+  const {
+    html,
+    elements,
+    updateHtml,
+    currentSource,
+    setCurrentSource,
+    files,
+    currentFile,
+    createFile,
+    deleteFile,
+    switchFile,
+  } = useLxParser('')
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null)
   const [hoveredEdge, setHoveredEdge] = useState<string | null>(null)
 
@@ -439,6 +450,15 @@ ${bodyContent}
           renderHtmlToIframe={(sendFn) => {
             sendToIframeRef.current = sendFn
           }}
+        />
+      }
+      leftHeader={
+        <FileTabs
+          files={files}
+          currentFile={currentFile}
+          onSwitch={switchFile}
+          onCreate={createFile}
+          onDelete={deleteFile}
         />
       }
     >
