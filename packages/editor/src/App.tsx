@@ -430,7 +430,6 @@ ${bodyContent}
           selectedElementId={selectedElementId}
           hoveredEdge={hoveredEdge}
           onSelectElement={handleSelectElement}
-          onAddElement={handleAddElement}
           onOpenPropertyEditor={handleOpenPropertyEditor}
           onDragStart={handleDragStart}
           onDrag={handleDrag}

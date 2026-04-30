@@ -10,7 +10,6 @@ interface VisualEditorProps {
   selectedElementId: string | null
   hoveredEdge: string | null
   onSelectElement: (id: string | null) => void
-  onAddElement: (parentId: string | null, newEl: LxElement) => void
   onOpenPropertyEditor: (elementId: string, x: number, y: number) => void
   onDragStart: (
     elementId: string,
@@ -40,7 +39,6 @@ export default function VisualEditor({
   selectedElementId,
   hoveredEdge,
   onSelectElement,
-  onAddElement,
   onOpenPropertyEditor,
   onDragStart,
   onDrag,
@@ -92,24 +90,6 @@ const handleZoom = (delta: number) => {
     }
   }, [selectedElementId, sendToIframe])
 
-  const handleAddNewElement = useCallback(() => {
-    const newId = 'el-' + Math.random().toString(36).substring(2, 9)
-    const newEl: LxElement = {
-      id: newId,
-      tagName: 'div',
-      attrs: {
-        lx: '',
-        'lx-left': 'body.left+0',
-        'lx-top': 'body.top+0',
-        'lx-width': '100',
-        'lx-height': '100',
-      },
-      children: [],
-      text: 'New Element',
-    }
-    onAddElement(null, newEl)
-  }, [onAddElement])
-
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -123,9 +103,6 @@ const handleZoom = (delta: number) => {
           <span style={styles.zoomLevel} onClick={() => setScale(1)}>{Math.round(scale * 100)}%</span>
           <button style={styles.zoomBtn} onClick={() => handleZoom(0.1)}>+</button>
         </div>
-        <button style={styles.addBtn} onClick={handleAddNewElement}>
-          + Add Element
-        </button>
       </div>
       <div style={styles.canvas}>
         <div
